@@ -48,7 +48,7 @@ export class TweetService {
       
 
         let tweet = await this.tweetRepository.create({
-            ...CreateTweetDto,
+            ...createTweetDto,
             user:User,
     
 
