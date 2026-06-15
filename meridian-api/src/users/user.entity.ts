@@ -2,7 +2,7 @@
 import { Exclude } from 'class-transformer';
 import { Post } from 'src/post/post.entity';
 import { Tweet } from 'src/tweets/dto/tweet.entity';
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn, Index } from 'typeorm';
 
 @Entity()
 export class User {
@@ -15,6 +15,7 @@ export class User {
   @Column("varchar" ,{length:100})
   lastName: string;
 
+  @Index()
   @Column("varchar" ,{unique:true, nullable:false})
   email: string;
 

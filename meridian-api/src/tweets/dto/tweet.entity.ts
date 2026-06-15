@@ -1,11 +1,12 @@
 import { User } from "src/users/user.entity";
-import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-
+import { User } from "src/users/user.entity";
+import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn, Index } from "typeorm";
 
 @Entity()
 export class Tweet {
     @PrimaryGeneratedColumn()
     id: number          
+
 
     @Column( {
         type: "text",
@@ -20,6 +21,7 @@ export class Tweet {
     image?: string
 
 
+    @Index()
     @ManyToOne(() => User, (user) => user.tweet, )
     user:User
 
