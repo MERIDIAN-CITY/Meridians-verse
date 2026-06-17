@@ -1,81 +1,66 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { Tweet } from "./dto/tweet.entity";
-import { Repository } from "typeorm";
-import { UserService } from "src/users/providers/user.services";
-import { CreateTweetDto } from "./dto/create-tweet.dto";
-import { InjectRepository } from "@nestjs/typeorm";
-import { UpdateTweetDto } from "./dto/update-tweet.dto";
-
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Tweet } from './dto/tweet.entity';
+import { Repository } from 'typeorm';
+import { UserService } from 'src/users/providers/user.services';
+import { CreateTweetDto } from './dto/create-tweet.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { UpdateTweetDto } from './dto/update-tweet.dto';
 
 @Injectable()
 export class TweetService {
-    constructor(
-        @InjectRepository(Tweet)
-        private tweetRepository: Repository<Tweet>,
+  constructor(
+    @InjectRepository(Tweet)
+    private tweetRepository: Repository<Tweet>,
 
-        private readonly userService:UserService,
+    private readonly userService: UserService,
+  ) {}
 
+  async getAllTweet(userId: number) {
+    const user = await this.userService.findOneById(userId);
 
-    ) {}
-
-
-    async getAllTweet (userId:number) {
-
-        let user = await this.userService.findOneById(userId)
-
-        if (!user) {
-            throw new NotFoundException(`User with ${userId} not found`)
-           
-        }
-
-         console.log(user)
-
-        return await this.tweetRepository.find({
-            where: {user:{id:userId}},
-
-        })
-
+    if (!user) {
+      throw new NotFoundException(`User with ${userId} not found`);
     }
 
+    console.log(user);
 
-    public async createTweet(createTweetDto:CreateTweetDto) {
+    return await this.tweetRepository.find({
+      where: { user: { id: userId } },
+    });
+  }
 
-        let User = await this.userService.findOneById(createTweetDto.userId)
+  public async createTweet(createTweetDto: CreateTweetDto) {
+    const User = await this.userService.findOneById(createTweetDto.userId);
 
-        let tweet = await this.tweetRepository.create({
-            ...createTweetDto,
-            user:User,
-    
+    const tweet = await this.tweetRepository.create({
+      ...createTweetDto,
+      user: User,
+    });
+    return this.tweetRepository.save(tweet);
+  }
 
-        })
-        return this.tweetRepository.save(tweet)   
+  public async updateTweet(updateTweetDto: UpdateTweetDto) {
+    const tweet = await this.tweetRepository.findOneBy({
+      id: updateTweetDto.id,
+    });
+
+    if (!tweet) {
+      throw new NotFoundException(
+        `Tweet with id ${updateTweetDto.id} not found`,
+      );
     }
 
+    tweet.text = updateTweetDto.text || tweet.text;
+    tweet.image = updateTweetDto.image || tweet.image;
 
-    public async updateTweet (updateTweetDto:UpdateTweetDto) {
+    return this.tweetRepository.save(tweet);
+  }
 
-        let tweet = await this.tweetRepository.findOneBy({
-            id: updateTweetDto.id
-        })
+  public async DeleteTweet(id: number) {
+    await this.tweetRepository.delete({
+      id,
+    });
 
-        if (!tweet) {
-            throw new NotFoundException(`Tweet with id ${updateTweetDto.id} not found`);
-        }
-
-        tweet.text = updateTweetDto.text || tweet.text
-        tweet.image = updateTweetDto.image || tweet.image
-    
-        return this.tweetRepository.save(tweet)
-    }
-
-
-
-    public async DeleteTweet (id:number) {
-      await  this.tweetRepository.delete({
-            id
-        })
-
-        return {deleted: true, id}
-    }
-
+    return { deleted: true, id };
+  }
 }

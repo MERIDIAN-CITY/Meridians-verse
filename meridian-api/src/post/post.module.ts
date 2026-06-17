@@ -1,4 +1,4 @@
-import { Module} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { PostController } from './post.controller';
 import { PostsService } from './provider/post.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,11 +10,15 @@ import { TagModule } from 'src/tag/tag.module';
 import { PaginationModule } from 'src/commom/pagination.module';
 // import { TagsService } from 'src/tag/tags.service';
 
-
 @Module({
-  imports: [UsersModule,TagModule,TypeOrmModule.forFeature([Post]),PaginationModule],
+  imports: [
+    UsersModule,
+    TagModule,
+    TypeOrmModule.forFeature([Post]),
+    PaginationModule,
+  ],
   controllers: [PostController],
   providers: [PostsService],
-  exports: [TypeOrmModule]
+  exports: [TypeOrmModule],
 })
 export class PostModule {}

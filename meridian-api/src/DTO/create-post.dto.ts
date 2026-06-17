@@ -1,82 +1,94 @@
-import { IsArray, IsDate, IsEnum, IsIn, IsInt, IsISO8601, isNotEmpty, IsNotEmpty, IsNumber,IsOptional,IsString, MinLength, ValidateNested } from "class-validator";
-import { PostStatus } from "src/post/Enums/post-status.enum";
-import { postType } from "src/post/Enums/post-type.enum";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { CreatePostMetaOptionsDto } from "./createPostMetadto";
+import {
+  IsArray,
+  IsDate,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsISO8601,
+  isNotEmpty,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { PostStatus } from 'src/post/Enums/post-status.enum';
+import { postType } from 'src/post/Enums/post-type.enum';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { CreatePostMetaOptionsDto } from './createPostMetadto';
 
 export class CreatePostDto {
-    
-    @ApiProperty({
-        description:"the tittle must be a string",
-        example:"jane Doe"
-    })
-    @IsString()
-    @MinLength(4)
-    @IsNotEmpty()
-    title:string;
+  @ApiProperty({
+    description: 'the tittle must be a string',
+    example: 'jane Doe',
+  })
+  @IsString()
+  @MinLength(4)
+  @IsNotEmpty()
+  title: string;
 
-    @ApiProperty({
-        description: "ID of the author user",
-        example: 1
-    })
-    @IsNotEmpty()
-    @IsInt()
-    authorId:number;
+  @ApiProperty({
+    description: 'ID of the author user',
+    example: 1,
+  })
+  @IsNotEmpty()
+  @IsInt()
+  authorId: number;
 
-    @ApiProperty({
-        enum:postType,
-        description:"possible value are series,story,post,page"
-    })
-    @IsEnum(postType)
-    postType: postType;
+  @ApiProperty({
+    enum: postType,
+    description: 'possible value are series,story,post,page',
+  })
+  @IsEnum(postType)
+  postType: postType;
 
+  @ApiProperty({
+    enum: PostStatus,
+    description: 'possible value are review,schedule,draft,publish ',
+  })
+  @IsEnum(PostStatus)
+  PostStatus: PostStatus;
 
-    @ApiProperty({
-        enum:PostStatus,
-        description:"possible value are review,schedule,draft,publish "
-    })
-    @IsEnum(PostStatus)
-    PostStatus:PostStatus;
+  @ApiPropertyOptional()
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  content: string;
 
-    @ApiPropertyOptional()
-    @IsString()
-    @IsNotEmpty()
-    @IsOptional()
-    content: string;
+  @ApiPropertyOptional({
+    description: 'URL of the featured image for the post',
+    example: 'https://example.com/image.png',
+  })
+  @IsString()
+  @IsOptional()
+  imageUrl: string;
 
-    @ApiPropertyOptional({
-        description: "URL of the featured image for the post",
-        example: "https://example.com/image.png"
-    })
-    @IsString()
-    @IsOptional()
-    imageUrl:string;
+  @ApiPropertyOptional({
+    description: 'ISO8601 formatted publication date',
+    example: '2026-06-17T00:00:00.000Z',
+  })
+  @IsDate()
+  @IsISO8601()
+  @IsOptional()
+  publishedDate: Date;
 
-    @ApiPropertyOptional({
-        description: "ISO8601 formatted publication date",
-        example: "2026-06-17T00:00:00.000Z"
-    })
-    @IsDate()
-    @IsISO8601()
-    @IsOptional()
-    publishedDate:Date;
+  @ApiProperty({
+    description: 'Array of tag IDs associated with this post',
+    example: [1, 2],
+  })
+  @IsArray()
+  @IsInt({ each: true })
+  @IsOptional()
+  tags: number[];
 
-    @ApiProperty({
-        description:"Array of tag IDs associated with this post",
-        example: [1, 2]
-    })
-    @IsArray()
-    @IsInt({each:true})
-    @IsOptional()
-    tags: number[];
-
-    @ApiPropertyOptional({
-        type: CreatePostMetaOptionsDto,
-        description: "Metadata options for the post"
-    })
-    @IsOptional()
-    @ValidateNested({each:true})
-    @Type(() => CreatePostMetaOptionsDto)
-    metaOptions?: CreatePostMetaOptionsDto | null;
+  @ApiPropertyOptional({
+    type: CreatePostMetaOptionsDto,
+    description: 'Metadata options for the post',
+  })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePostMetaOptionsDto)
+  metaOptions?: CreatePostMetaOptionsDto | null;
 }

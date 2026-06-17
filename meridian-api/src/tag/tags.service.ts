@@ -6,23 +6,20 @@ import { CreateTagDto } from 'src/DTO/createTagDto';
 
 @Injectable()
 export class TagsService {
-    constructor (@InjectRepository(Tag) private readonly tagRepository:Repository<Tag>){}
+  constructor(
+    @InjectRepository(Tag) private readonly tagRepository: Repository<Tag>,
+  ) {}
 
+  public async findMultiTag(tags: number[]) {
+    const result = this.tagRepository.find({
+      where: { id: In(tags) },
+    });
+    return result;
+  }
 
-    public async findMultiTag (tags: number[]) {
-        const result = this.tagRepository.find({
-            where: {id: In(tags)},
-        });
-        return result
+  public async createTag(createTagDto: CreateTagDto) {
+    const tag = this.tagRepository.create(createTagDto);
 
-    }
-
-
-
-    public async createTag (createTagDto:CreateTagDto) {
-        const tag = this.tagRepository.create(createTagDto)
-
-        return await this.tagRepository.save(tag)    
-
-    }
+    return await this.tagRepository.save(tag);
+  }
 }

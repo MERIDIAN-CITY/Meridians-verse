@@ -1,12 +1,10 @@
-import { Module,forwardRef } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { Pagination } from './pagination/Provider/pagination';
 
-
-
 @Module({
-  imports:[],
+  imports: [],
   providers: [Pagination],
   controllers: [],
-  exports:[Pagination]
+  exports: [Pagination],
 })
 export class PaginationModule {}

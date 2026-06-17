@@ -30,7 +30,10 @@ describe('TweetService', () => {
     persistedTweets = [];
 
     tweetRepository = {
-      create: jest.fn((tweet) => ({ id: persistedTweets.length + 1, ...tweet })),
+      create: jest.fn((tweet) => ({
+        id: persistedTweets.length + 1,
+        ...tweet,
+      })),
       save: jest.fn(async (tweet) => {
         persistedTweets.push(tweet);
         return tweet;

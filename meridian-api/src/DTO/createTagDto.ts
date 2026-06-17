@@ -42,5 +42,5 @@ export class CreateTagDto {
   @IsOptional()
   @IsUrl()
   @MaxLength(1024)
-  featuredImage: string;
+  featuredImage: string;
 }

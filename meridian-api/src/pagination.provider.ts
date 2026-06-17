@@ -6,7 +6,6 @@
 // import { REQUEST } from '@nestjs/core';
 // import { Paginated } from '../interface/paginationInterface';
 
-
 // @Injectable()
 // export class PaginationProvider {
 
@@ -30,19 +29,18 @@
 //       const newUrl = new URL(this.request.url ,baseUrl)
 //       console.log(newUrl);
 //       console.log(baseUrl);
-      
+
 //       const totalItems = await repository.count()
 //       const totalPages = Math.ceil(totalItems / paginationQueryDto.limit); // mathceil helps add another page when the data excceeds the limit
 
- 
-//       const nextPage = 
-//       paginationQueryDto === totalPages 
+//       const nextPage =
+//       paginationQueryDto === totalPages
 //       ? paginationQueryDto.page
 //        : paginationQueryDto.page + 1;
 
-//       const previousPage = 
+//       const previousPage =
 //       paginationQueryDto.page === 1
-//       ? paginationQueryDto.page 
+//       ? paginationQueryDto.page
 //       : paginationQueryDto.page - 1;
 
 //       const finalRepsonse : Paginated<T> = {
@@ -64,10 +62,8 @@
 
 //             previous: `${newUrl.origin}${newUrl.pathname}?limit=${paginationQueryDto.limit}&page=${previousPage}`
 
-
 //         }
 //       }
 //       return finalRepsonse;
 // }
 // }
-

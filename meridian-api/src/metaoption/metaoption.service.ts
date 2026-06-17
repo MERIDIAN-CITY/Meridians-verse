@@ -6,13 +6,14 @@ import { CreatePostMetaOptionsDto } from 'src/DTO/createPostMetadto';
 
 @Injectable()
 export class MetaoptionService {
-    constructor (@InjectRepository(MetaOption) private metaRepository:Repository<MetaOption>) {}
+  constructor(
+    @InjectRepository(MetaOption)
+    private metaRepository: Repository<MetaOption>,
+  ) {}
 
-    public async createMeta (createPostMetaoption:CreatePostMetaOptionsDto) {
+  public async createMeta(createPostMetaoption: CreatePostMetaOptionsDto) {
+    const metaoption = this.metaRepository.create(createPostMetaoption);
 
-        let metaoption = this.metaRepository.create(createPostMetaoption)
-
-        return await this.metaRepository.save(metaoption)
-    }
-
+    return await this.metaRepository.save(metaoption);
+  }
 }

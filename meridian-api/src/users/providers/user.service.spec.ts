@@ -1,10 +1,26 @@
 // Mock entities that import src/-aliased paths not available in Jest
 jest.mock('../user.entity', () => ({ User: class User {} }), { virtual: true });
-jest.mock('src/post/post.entity', () => ({ Post: class Post {} }), { virtual: true });
-jest.mock('src/tweets/dto/tweet.entity', () => ({ Tweet: class Tweet {} }), { virtual: true });
-jest.mock('src/auth/providers/hashing', () => ({ HashingProvider: class HashingProvider {} }), { virtual: true });
-jest.mock('src/mail/providers/mail.provider', () => ({ MailProvider: class MailProvider {} }), { virtual: true });
-jest.mock('src/commom/userAlreadyExistException', () => ({ UserAlreadyExistException: class UserAlreadyExistException {} }), { virtual: true });
+jest.mock('src/post/post.entity', () => ({ Post: class Post {} }), {
+  virtual: true,
+});
+jest.mock('src/tweets/dto/tweet.entity', () => ({ Tweet: class Tweet {} }), {
+  virtual: true,
+});
+jest.mock(
+  'src/auth/providers/hashing',
+  () => ({ HashingProvider: class HashingProvider {} }),
+  { virtual: true },
+);
+jest.mock(
+  'src/mail/providers/mail.provider',
+  () => ({ MailProvider: class MailProvider {} }),
+  { virtual: true },
+);
+jest.mock(
+  'src/commom/userAlreadyExistException',
+  () => ({ UserAlreadyExistException: class UserAlreadyExistException {} }),
+  { virtual: true },
+);
 jest.mock('src/DTO/create-user.dto', () => ({}), { virtual: true });
 jest.mock('src/DTO/postparamdto', () => ({}), { virtual: true });
 jest.mock('src/DTO/patch-user.dto', () => ({}), { virtual: true });
@@ -14,13 +30,26 @@ import { UserService } from './user.services';
 
 describe('UserService', () => {
   let service: UserService;
-  let usersRepository: { find: jest.Mock; findOneBy: jest.Mock; save: jest.Mock };
+  let usersRepository: {
+    find: jest.Mock;
+    findOneBy: jest.Mock;
+    save: jest.Mock;
+  };
   let createuserprovider: { createUsers: jest.Mock };
   let findOneByemail: { findOneByEmail: jest.Mock };
-  let createUserWithBooks: { createUserwithBook: jest.Mock; getAllUserWithBook: jest.Mock };
+  let createUserWithBooks: {
+    createUserwithBook: jest.Mock;
+    getAllUserWithBook: jest.Mock;
+  };
   let createManyUserService: { manyUsers: jest.Mock };
 
-  const mockUser = { id: 1, firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com', password: 'hashed' };
+  const mockUser = {
+    id: 1,
+    firstName: 'Jane',
+    lastName: 'Doe',
+    email: 'jane@example.com',
+    password: 'hashed',
+  };
 
   beforeEach(() => {
     usersRepository = {
@@ -52,7 +81,12 @@ describe('UserService', () => {
   });
 
   it('createUsers delegates to createuserprovider', async () => {
-    const dto = { email: 'jane@example.com', password: 'pass', firstName: 'Jane', lastName: 'Doe' } as any;
+    const dto = {
+      email: 'jane@example.com',
+      password: 'pass',
+      firstName: 'Jane',
+      lastName: 'Doe',
+    } as any;
     const result = await service.createUsers(dto);
     expect(createuserprovider.createUsers).toHaveBeenCalledWith(dto);
     expect(result).toEqual([mockUser]);
@@ -60,7 +94,9 @@ describe('UserService', () => {
 
   it('GetOneByEmail delegates to findOneByemail', async () => {
     const result = await service.GetOneByEmail('jane@example.com');
-    expect(findOneByemail.findOneByEmail).toHaveBeenCalledWith('jane@example.com');
+    expect(findOneByemail.findOneByEmail).toHaveBeenCalledWith(
+      'jane@example.com',
+    );
     expect(result).toEqual(mockUser);
   });
 

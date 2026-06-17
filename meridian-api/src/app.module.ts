@@ -24,7 +24,6 @@ import { MailProvider } from './mail/providers/mail.provider';
 import { TweetModule } from './tweets/dto/tweet.module';
 import { UploadModule } from './upload/upload.module';
 
-
 @Module({
   imports: [
     /**
@@ -76,10 +75,8 @@ import { UploadModule } from './upload/upload.module';
           username: config.get<string>('POSTGRES_USER'),
           password: config.get<string>('POSTGRES_PASSWORD'),
           database: config.get<string>('POSTGRES_DB'),
-          synchronize:
-            config.get<string>('POSTGRES_SYNC') === 'true',
-          autoLoadEntities:
-            config.get<string>('POSTGRES_LOAD') === 'true',
+          synchronize: config.get<string>('POSTGRES_SYNC') === 'true',
+          autoLoadEntities: config.get<string>('POSTGRES_LOAD') === 'true',
         };
       },
     }),
@@ -95,7 +92,7 @@ import { UploadModule } from './upload/upload.module';
     MailModule,
     PaginationModule,
     TweetModule,
-    UploadModule 
+    UploadModule,
   ],
 
   controllers: [AppController],

@@ -12,20 +12,19 @@ import { Tweet } from 'src/tweets/dto/tweet.entity';
 import { TweetModule } from 'src/tweets/dto/tweet.module';
 import { UserAuthFacade } from './providers/user-auth.facade';
 
-
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User,Tweet]),
+    TypeOrmModule.forFeature([User, Tweet]),
     forwardRef(() => AuthModule),
   ],
   controllers: [UsersController],
-  providers: [UserService,
-     CreateUserProvider,
-      FindOneByEmail,
-      CreateManyUser,
-      CreateUserBookProvider,
-      UserAuthFacade,
-    
+  providers: [
+    UserService,
+    CreateUserProvider,
+    FindOneByEmail,
+    CreateManyUser,
+    CreateUserBookProvider,
+    UserAuthFacade,
   ],
   exports: [TypeOrmModule, UserService, UserAuthFacade],
 })

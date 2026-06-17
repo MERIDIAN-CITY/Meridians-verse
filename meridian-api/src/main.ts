@@ -13,16 +13,18 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions:{
+      transformOptions: {
         enableImplicitConversion: true,
-      }
+      },
     }),
   );
 
   // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Meridian API') // Add a title
-    .setDescription('Productivity-powered on-chain economy built on the Stellar blockchain.')// Add a description
+    .setDescription(
+      'Productivity-powered on-chain economy built on the Stellar blockchain.',
+    ) // Add a description
     .setTermsOfService('http://localhost:3000/terms of service')
     .setVersion('1.0') // Set the API version
     .addBearerAuth()
@@ -32,7 +34,7 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document); // Serve Swagger at '/api'
 
   //making intwerceptor global
-  app.useGlobalInterceptors(new DataResponseInterceptor)
+  app.useGlobalInterceptors(new DataResponseInterceptor());
 
   await app.listen(process.env.PORT ?? 3000);
 }

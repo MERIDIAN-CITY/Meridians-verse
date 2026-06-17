@@ -32,12 +32,12 @@
 //     ]) ?? AuthGuardGuard.defaultOfType
 //     console.log(authTypes)
 //     //array of guard
-//     const guards = authTypes.map(((type) => this.authTypeGuardMap[type].flat()) ) 
+//     const guards = authTypes.map(((type) => this.authTypeGuardMap[type].flat()) )
 //     console.log(guards)
 //     const error = new UnauthorizedException('User not Authorize')
 //     //loops guards
 //   //   for (const instance of guards)  await Promise.resolve {
-//   //   instance.Canactivate(context) 
+//   //   instance.Canactivate(context)
 //   //   .catch((err)  =>  {
 //   //     error: err
 //   //   })
@@ -46,6 +46,6 @@
 //   //   }
 //   //   throw error
 //   // }
-    
+
 //   }
 // }
