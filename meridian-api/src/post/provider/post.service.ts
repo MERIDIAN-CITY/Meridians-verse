@@ -29,7 +29,7 @@ export class PostsService {
     private readonly cacheManager: Cache,
 
     private readonly paginationService: Pagination,
-  ) {}
+  ) { }
 
   // =========================
   // GET ALL POSTS (WITH CACHE)
@@ -52,8 +52,7 @@ export class PostsService {
       this.postRepository,
     );
 
-    await this.cacheManager.set(cacheKey, result, { ttl: 60 });
-
+    await this.cacheManager.set(cacheKey, result, 60);
     return result;
   }
 
