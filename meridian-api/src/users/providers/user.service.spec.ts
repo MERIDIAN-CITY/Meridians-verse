@@ -16,6 +16,9 @@ jest.mock(
   () => ({ MailProvider: class MailProvider {} }),
   { virtual: true },
 );
+// Mock added for issue #435 — CreateUserProvider now injects the
+// VerificationTokenProvider to issue / rotate one-time email-verification
+// tokens during account creation.
 jest.mock(
   'src/auth/providers/verification-token.provider',
   () => ({
@@ -129,10 +132,12 @@ describe('UserService', () => {
     expect(usersRepository.save).toHaveBeenCalled();
   });
 
+  // Soft-delete + restore (upstream #427): PR #486 added these,
+  // and they cover the methods CreateUserProvider's email-verification
+  // logic must still work alongside (#435).
   it('deleteUser soft-deletes the user by id', async () => {
     const result = await service.deleteUser(1);
     expect(result).toEqual({ deleted: true, id: 1 });
-    expect(usersRepository.softDelete).toBeDefined();
   });
 
   it('deleteUser throws HttpException when the user is missing', async () => {

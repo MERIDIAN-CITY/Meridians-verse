@@ -9,7 +9,11 @@ jest.mock('./hashing', () => ({ HashingProvider: class HashingProvider {} }), {
 jest.mock('./token.provider', () => ({}), { virtual: true });
 jest.mock('../config/jwt.config', () => ({}), { virtual: true });
 
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  RequestTimeoutException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { SignInProviders } from './sign-in.providers';
 
 describe('SignInProviders', () => {
@@ -75,6 +79,25 @@ describe('SignInProviders', () => {
     expect(generateTokenProvider.generateTokens).not.toHaveBeenCalled();
   });
 
+  it('wraps hashing exceptions in a RequestTimeoutException', async () => {
+    userAuthFacade.findUserByEmail.mockResolvedValue({
+      id: 1,
+      email: 'a@b.com',
+      password: 'hashed',
+      emailVerified: true,
+    });
+    hashingProvider.comparePassword.mockRejectedValue(new Error('db-down'));
+
+    await expect(
+      signIn.SignIn({ email: 'a@b.com', password: 'plain' } as any),
+    ).rejects.toBeInstanceOf(RequestTimeoutException);
+  });
+
+  /**
+   * Email verification gate (issue #435):
+   * the 403 path lets clients render a useful "please verify first" message
+   * without leaking account existence to attackers who guess passwords.
+   */
   it('throws ForbiddenException (HTTP 403) when the email is not verified', async () => {
     userAuthFacade.findUserByEmail.mockResolvedValue({
       id: 1,
