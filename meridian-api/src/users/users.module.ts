@@ -26,6 +26,6 @@ import { UserAuthFacade } from './providers/user-auth.facade';
     CreateUserBookProvider,
     UserAuthFacade,
   ],
-  exports: [TypeOrmModule, UserService, UserAuthFacade],
+  exports: [TypeOrmModule, UserService, UserAuthFacade, CreateUserProvider],
 })
 export class UsersModule {}

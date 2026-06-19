@@ -2,11 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { MailProvider } from './providers/mail.provider';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
-import { config } from 'process';
-import { from } from 'form-data';
-import { Template } from 'ejs';
 import { join } from 'path';
-import { strict } from 'assert';
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
 
 @Global()
@@ -16,24 +12,24 @@ import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
         transport: {
-          host: config.get('MAIL_HOST'),
+          host: config.get<string>('MAIL_HOST'),
           secure: false,
-          port: config.get('MAIL_PORT'),
+          port: config.get<number>('MAIL_PORT'),
           auth: {
-            user: config.get('SMTP_USERNAME'),
-            pass: config.get('SMTP_PASSWORD'),
+            user: config.get<string>('SMTP_USERNAME'),
+            pass: config.get<string>('SMTP_PASSWORD'),
           },
-          default: {
-            from: `no-reply-<helpdesk@estatte-management>`,
-          },
-          template: {
-            dir: join(__dirname, 'template'),
-            adapter: new EjsAdapter({
-              inlineCssEnabled: true,
-            }),
-            Option: {
-              strict: false,
-            },
+        },
+        defaults: {
+          from: `"estatte-management" <helpdesk@estate-management.com>`,
+        },
+        template: {
+          dir: join(__dirname, 'template'),
+          adapter: new EjsAdapter({
+            inlineCssEnabled: true,
+          }),
+          options: {
+            strict: false,
           },
         },
       }),

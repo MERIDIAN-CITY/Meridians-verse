@@ -17,12 +17,20 @@ jest.mock(
   { virtual: true },
 );
 jest.mock(
+  'src/auth/providers/verification-token.provider',
+  () => ({
+    VerificationTokenProvider: class VerificationTokenProvider {},
+    VERIFICATION_TTL_MS: 24 * 60 * 60 * 1000,
+  }),
+  { virtual: true },
+);
+jest.mock(
   'src/common/exceptions/user-already-exists.exception',
   () => ({ UserAlreadyExistException: class UserAlreadyExistException {} }),
   { virtual: true },
 );
 jest.mock('src/users/dto/create-user.dto', () => ({}), { virtual: true });
-jest.mock('src/post/dto/post-param.dto', () => ({}), { virtual: true });
+jest.mock('src/users/dto/postparamdto', () => ({}), { virtual: true });
 jest.mock('src/users/dto/patch-user.dto', () => ({}), { virtual: true });
 
 import { HttpException } from '@nestjs/common';
@@ -34,6 +42,8 @@ describe('UserService', () => {
     find: jest.Mock;
     findOneBy: jest.Mock;
     save: jest.Mock;
+    softDelete: jest.Mock;
+    restore: jest.Mock;
   };
   let createuserprovider: { createUsers: jest.Mock };
   let findOneByemail: { findOneByEmail: jest.Mock };
@@ -56,6 +66,8 @@ describe('UserService', () => {
       find: jest.fn(async () => [mockUser]),
       findOneBy: jest.fn(async () => mockUser),
       save: jest.fn(async (u) => u),
+      softDelete: jest.fn(async () => ({ affected: 1 })),
+      restore: jest.fn(async () => ({ affected: 1 })),
     };
     createuserprovider = { createUsers: jest.fn(async () => [mockUser]) };
     findOneByemail = { findOneByEmail: jest.fn(async () => mockUser) };
@@ -117,7 +129,24 @@ describe('UserService', () => {
     expect(usersRepository.save).toHaveBeenCalled();
   });
 
-  it('deleteUser throws HttpException', async () => {
-    await expect(service.deleteUser()).rejects.toThrow(HttpException);
+  it('deleteUser soft-deletes the user by id', async () => {
+    const result = await service.deleteUser(1);
+    expect(result).toEqual({ deleted: true, id: 1 });
+    expect(usersRepository.softDelete).toBeDefined();
+  });
+
+  it('deleteUser throws HttpException when the user is missing', async () => {
+    usersRepository.findOneBy.mockResolvedValue(null);
+    await expect(service.deleteUser(99)).rejects.toThrow(HttpException);
+  });
+
+  it('restoreUser throws HttpException when nothing is restored', async () => {
+    usersRepository.restore.mockResolvedValueOnce({ affected: 0 });
+    await expect(service.restoreUser(99)).rejects.toThrow(HttpException);
+  });
+
+  it('restoreUser returns success when affected > 0', async () => {
+    const result = await service.restoreUser(1);
+    expect(result).toEqual({ restored: true, id: 1 });
   });
 });

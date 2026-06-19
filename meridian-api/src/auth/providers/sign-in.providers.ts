@@ -1,9 +1,10 @@
 import {
+  ForbiddenException,
   Injectable,
   RequestTimeoutException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SignInDto } from '../dto/sign-in.dto';
+import { SignInDto } from 'src/auth/dto/sign-in.dto';
 import { UserAuthFacade } from 'src/users/providers/user-auth.facade';
 import { HashingProvider } from './hashing';
 import { JwtService } from '@nestjs/jwt';
@@ -43,6 +44,15 @@ export class SignInProviders {
     //send a confirmation
     if (!isEqual) {
       throw new UnauthorizedException('password/email is wrong');
+    }
+
+    // Block sign-in for accounts that have not verified their email yet.
+    // Returning 403 (instead of 401) lets clients render a useful message:
+    // "Please verify your email before signing in."
+    if (!user.emailVerified) {
+      throw new ForbiddenException(
+        'Email not verified. Please check your inbox and follow the verification link before signing in.',
+      );
     }
 
     const token = await this.generateTokenProvider.generateTokens(user);

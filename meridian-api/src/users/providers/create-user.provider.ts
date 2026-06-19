@@ -1,16 +1,18 @@
 import {
   BadRequestException,
-  forwardRef,
-  Inject,
   Injectable,
   RequestTimeoutException,
 } from '@nestjs/common';
-import { CreateUserDto } from '../dto/create-user.dto';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { Repository } from 'typeorm';
 import { User } from '../user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { HashingProvider } from 'src/auth/providers/hashing';
 import { MailProvider } from 'src/mail/providers/mail.provider';
+import {
+  VERIFICATION_TTL_MS,
+  VerificationTokenProvider,
+} from 'src/auth/providers/verification-token.provider';
 
 @Injectable()
 export class CreateUserProvider {
@@ -20,6 +22,8 @@ export class CreateUserProvider {
     private readonly hashingProvider: HashingProvider,
 
     private readonly mailService: MailProvider,
+
+    private readonly verificationTokens: VerificationTokenProvider,
   ) {}
   public async createUsers(createUserDto: CreateUserDto) {
     // check if user already exits
@@ -43,10 +47,17 @@ export class CreateUserProvider {
     if (existingUser) {
       throw new BadRequestException('User already exist');
     }
+
+    // Generate a one-time verification token to send in the welcome email.
+    const verificationToken = this.verificationTokens.generate();
+
     // Create the user
     let newUser = this.userRepository.create({
       ...createUserDto,
       password: await this.hashingProvider.hashPassword(createUserDto.password),
+      emailVerified: false,
+      verificationToken: this.verificationTokens.hash(verificationToken),
+      verificationTokenExpires: new Date(Date.now() + VERIFICATION_TTL_MS),
     });
     try {
       newUser = await this.userRepository.save(newUser);
@@ -61,9 +72,10 @@ export class CreateUserProvider {
     }
 
     try {
-      await this.mailService.WelcomeEmail(newUser);
+      await this.mailService.sendVerificationEmail(newUser, verificationToken);
     } catch (error) {
-      // throw new RequestTimeoutException('user already exist')
+      // Mail failures must not roll back the account creation; the user
+      // can request a fresh verification email via /auth/resend-verification.
     }
     return [newUser];
   }
