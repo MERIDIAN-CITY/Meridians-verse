@@ -1,4 +1,4 @@
-import { Body, Injectable } from '@nestjs/common';
+import { Body, Inject, Injectable } from '@nestjs/common';
 import { GetPostsParamDto } from '../dto/post-param.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Post } from '../post.entity';
@@ -10,6 +10,7 @@ import { PatchPostDto } from '../dto/patch-post.dto';
 import { GetPostsDto } from '../dto/get-posts.dto';
 import { Pagination } from 'src/common/pagination/providers/pagination.provider';
 import { Paginated } from 'src/common/pagination/interfaces/paginated.interface';
+import { CACHE_MANAGER } from '@nestjs/cache-manager/dist/cache.constants';
 
 @Injectable()
 export class PostsService {
@@ -20,20 +21,34 @@ export class PostsService {
 
     private readonly tagService: TagsService,
 
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
+
     private readonly paginationService: Pagination,
-  ) {}
+  ) { }
 
   public async FindAllposts(postQuery: GetPostsDto): Promise<Paginated<Post>> {
-    {
-      const post = await this.paginationService.paginatedQuery(
-        {
-          limit: postQuery.limit,
-          page: postQuery.page,
-        },
-        this.postRepository,
-      );
-      return post;
+    const cacheKey = `posts:${postQuery.page}:${postQuery.limit}`;
+
+    // Check if data is already in cache
+    const cached = await this.cacheManager.get<Paginated<Post>>(cacheKey);
+    if (cached) {
+      return cached;
     }
+
+    // Fetch from database if cache is empty
+    const result = await this.paginationService.paginatedQuery(
+      {
+        limit: postQuery.limit,
+        page: postQuery.page,
+      },
+      this.postRepository,
+    );
+
+    // Store the result in cache for 60 seconds
+    await this.cacheManager.set(cacheKey, result, 60);
+
+    return result;
   }
 
   public async deleteOne(id: number) {

@@ -10,6 +10,9 @@ import { FindOneByEmail } from './find-one-by-email';
 import { CreateManyUser } from './createManyUser.Provider';
 import { CreateManyUsersDto } from '../dto/create-many-users.dto';
 import { CreateUserBookProvider } from './createUserWithBook';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { Inject } from '@nestjs/common';
 
 @Injectable()
 export class UserService {
@@ -26,7 +29,10 @@ export class UserService {
 
     // depedency injection of createManyUsers
     private readonly createManyUserService: CreateManyUser,
-  ) {}
+
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
+  ) { }
   // repository pattern that help commiunicate with the Database
   // just by doing this we have injected a repository pattern
 
@@ -61,8 +67,18 @@ export class UserService {
 
   //finding users by id and userservice was exported in postmodule i.e export:[typeorm,userservice]
   public async findOneId(id: number): Promise<User | null> {
+    const cacheKey = `user:${id}`;
+
+    // 1. Attempt to get the user from cache first
+    const cached = await this.cacheManager.get<User>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // 2. Fallback to database query
     const user = await this.usersRepository.findOneBy({ id });
 
+    // 3. Throw formatted error if user is missing
     if (!user) {
       throw new HttpException(
         {
@@ -76,6 +92,9 @@ export class UserService {
         },
       );
     }
+
+    // 4. Cache the result for 300 seconds (5 minutes) before returning
+    await this.cacheManager.set(cacheKey, user, 300);
 
     return user;
   }
