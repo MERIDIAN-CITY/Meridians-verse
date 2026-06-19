@@ -1,42 +1,49 @@
-import { Body, Inject, Injectable } from '@nestjs/common';
-import { GetPostsParamDto } from '../dto/post-param.dto';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Post } from '../post.entity';
 import { Repository } from 'typeorm';
+
+import { Post } from '../post.entity';
+import { GetPostsDto } from '../dto/get-posts.dto';
 import { CreatePostDto } from '../dto/create-post.dto';
+import { PatchPostDto } from '../dto/patch-post.dto';
+
 import { UserService } from 'src/users/providers/user.services';
 import { TagsService } from 'src/tag/tags.service';
-import { PatchPostDto } from '../dto/patch-post.dto';
-import { GetPostsDto } from '../dto/get-posts.dto';
+
 import { Pagination } from 'src/common/pagination/providers/pagination.provider';
 import { Paginated } from 'src/common/pagination/interfaces/paginated.interface';
-import { CACHE_MANAGER } from '@nestjs/cache-manager/dist/cache.constants';
+
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class PostsService {
   constructor(
-    @InjectRepository(Post) private postRepository: Repository<Post>,
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
 
     private readonly userService: UserService,
-
     private readonly tagService: TagsService,
 
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
 
     private readonly paginationService: Pagination,
-  ) { }
+  ) {}
 
-  public async FindAllposts(postQuery: GetPostsDto): Promise<Paginated<Post>> {
+  // =========================
+  // GET ALL POSTS (WITH CACHE)
+  // =========================
+  public async FindAllposts(
+    postQuery: GetPostsDto,
+  ): Promise<Paginated<Post>> {
     const cacheKey = `posts:${postQuery.page}:${postQuery.limit}`;
 
-    // Check if data is already in cache
     const cached = await this.cacheManager.get<Paginated<Post>>(cacheKey);
     if (cached) {
       return cached;
     }
 
-    // Fetch from database if cache is empty
     const result = await this.paginationService.paginatedQuery(
       {
         limit: postQuery.limit,
@@ -45,62 +52,90 @@ export class PostsService {
       this.postRepository,
     );
 
-    // Store the result in cache for 60 seconds
-    await this.cacheManager.set(cacheKey, result, 60);
+    await this.cacheManager.set(cacheKey, result, { ttl: 60 });
 
     return result;
   }
 
+  // =========================
+  // DELETE POST (CACHE INVALIDATION)
+  // =========================
   public async deleteOne(id: number) {
-    //find the post you want to delete, find the metaoption of the post you want to delete
     await this.postRepository.delete(id);
+
+    await this.clearPostCache();
 
     return { deleted: true, id };
   }
 
+  // =========================
+  // CREATE POST (CACHE INVALIDATION)
+  // =========================
   public async createPost(createpostDto: CreatePostDto) {
-    //find author from databbase based on author ID i.e from postDTo
     const author = await this.userService.findOneId(createpostDto.authorId);
-
-    // find tag from database
     const tags = await this.tagService.findMultiTag(createpostDto.tags);
 
-    // /SECOND METHIOD very short line(64 & 74) AFTER puting cascade to "true" in post entity
-    // for this method comment or remove the metaoption repository
-    // the remove  [Metoption] from Post module we dont need it
     const post = this.postRepository.create({
       ...createpostDto,
       author,
       tags,
     });
 
-    // return the post to the user
-    return await this.postRepository.save(post);
+    const saved = await this.postRepository.save(post);
+
+    await this.clearPostCache();
+
+    return saved;
   }
 
-  //TO EDIT A POST
+  // =========================
+  // UPDATE POST (CACHE INVALIDATION)
+  // =========================
   public async UpdatePost(patchPostDto: PatchPostDto) {
-    //STEPS
-
-    //find the tags
     const tags = await this.tagService.findMultiTag(patchPostDto.tags);
 
-    // find the post
     const post = await this.postRepository.findOneBy({
       id: patchPostDto.id,
     });
 
-    // update the properties
+    if (!post) {
+      throw new Error('Post not found');
+    }
+
     post.title = patchPostDto.title ?? post.title;
     post.content = patchPostDto.content ?? post.content;
     post.imageUrl = patchPostDto.imageUrl ?? post.imageUrl;
     post.postType = patchPostDto.postType ?? post.postType;
     post.postStatus = patchPostDto.PostStatus ?? post.postStatus;
 
-    //assign the new tags
     post.tags = tags;
 
-    // save the post
-    return await this.postRepository.save(post);
+    const updated = await this.postRepository.save(post);
+
+    await this.clearPostCache();
+
+    return updated;
+  }
+
+  // =========================
+  // CACHE INVALIDATION HELPER
+  // =========================
+  private async clearPostCache() {
+    // cache-manager v7 has no "del all by prefix"
+    // so we manually clear known pagination ranges (simple strategy)
+
+    const limits = [10, 20, 50];
+    const pages = [1, 2, 3, 4, 5];
+
+    const deletePromises: Promise<any>[] = [];
+
+    for (const page of pages) {
+      for (const limit of limits) {
+        const key = `posts:${page}:${limit}`;
+        deletePromises.push(this.cacheManager.del(key));
+      }
+    }
+
+    await Promise.allSettled(deletePromises);
   }
 }
