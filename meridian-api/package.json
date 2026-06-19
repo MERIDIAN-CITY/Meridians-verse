@@ -80,9 +80,19 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.ts",
+      "!**/*.spec.ts",
+      "!**/*.module.ts",
+      "!**/*.entity.ts",
+      "!**/*.dto.ts",
+      "!**/*.constants.ts",
+      "!**/*.interface.ts",
+      "!**/main.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/../jest.setup.ts"
+    ]
   }
 }

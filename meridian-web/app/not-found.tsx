@@ -1,4 +1,4 @@
-import Link from "next/next-links";
+import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 
 export default function NotFoundState() {

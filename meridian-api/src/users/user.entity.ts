@@ -8,6 +8,7 @@ import {
   OneToMany,
   OneToOne,
   JoinColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 
 @Entity()
@@ -34,6 +35,11 @@ export class User {
 
   @OneToMany(() => Tweet, (tweet) => tweet.user)
   tweet: Tweet[];
+
+  // Soft-delete marker (issue #427): when set the row is hidden from queries
+  // but can be restored via POST /users/:id/restore
+  @DeleteDateColumn()
+  deletedAt?: Date;
 
   // @Column({ default: true })
   // isActive: boolean;

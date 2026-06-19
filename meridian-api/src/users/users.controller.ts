@@ -100,11 +100,23 @@ export class UsersController {
     return this.userService.createMany(createManyUserDto);
   }
 
-  @Delete()
-  @ApiOperation({ summary: 'Delete users' })
-  @ApiResponse({ status: 200, description: 'Users deleted successfully' })
-  public deleteUsers() {
-    return this.userService.deleteUser;
+  @Delete('/:id')
+  @ApiOperation({ summary: 'Soft-delete a user by ID (issue #427)' })
+  @ApiResponse({ status: 200, description: 'User soft-deleted successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  public deleteUsers(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.deleteUser(id);
+  }
+
+  @Post('/:id/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted user by ID' })
+  @ApiResponse({ status: 200, description: 'User restored successfully' })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found or not soft-deleted',
+  })
+  public restoreUser(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.restoreUser(id);
   }
 
   @Patch()

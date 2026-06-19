@@ -3,7 +3,7 @@ jest.mock('../user.entity', () => ({ User: class User {} }), { virtual: true });
 jest.mock('src/post/post.entity', () => ({ Post: class Post {} }), {
   virtual: true,
 });
-jest.mock('src/tweets/entities/tweet.entity', () => ({ Tweet: class Tweet {} }), {
+jest.mock('src/tweets/dto/tweet.entity', () => ({ Tweet: class Tweet {} }), {
   virtual: true,
 });
 jest.mock(
@@ -17,13 +17,13 @@ jest.mock(
   { virtual: true },
 );
 jest.mock(
-  'src/common/exceptions/user-already-exists.exception',
+  'src/commom/userAlreadyExistException',
   () => ({ UserAlreadyExistException: class UserAlreadyExistException {} }),
   { virtual: true },
 );
-jest.mock('src/users/dto/create-user.dto', () => ({}), { virtual: true });
-jest.mock('src/post/dto/post-param.dto', () => ({}), { virtual: true });
-jest.mock('src/users/dto/patch-user.dto', () => ({}), { virtual: true });
+jest.mock('src/DTO/create-user.dto', () => ({}), { virtual: true });
+jest.mock('src/DTO/postparamdto', () => ({}), { virtual: true });
+jest.mock('src/DTO/patch-user.dto', () => ({}), { virtual: true });
 
 import { HttpException } from '@nestjs/common';
 import { UserService } from './user.services';
@@ -117,7 +117,54 @@ describe('UserService', () => {
     expect(usersRepository.save).toHaveBeenCalled();
   });
 
+  it('editUser keeps existing fields when fields are missing', async () => {
+    const stored = { ...mockUser };
+    usersRepository.findOneBy.mockResolvedValueOnce(stored);
+    usersRepository.save.mockImplementationOnce(async (u) => u);
+
+    const result = await service.editUser({ id: 1 } as any);
+
+    expect(result).toMatchObject({
+      firstName: stored.firstName,
+      lastName: stored.lastName,
+      email: stored.email,
+      password: stored.password,
+    });
+  });
+
   it('deleteUser throws HttpException', async () => {
     await expect(service.deleteUser()).rejects.toThrow(HttpException);
+  });
+
+  it('createMany delegates to the createManyUserService', async () => {
+    const dto = { users: [{ email: 'a@b.com' }, { email: 'c@d.com' }] } as any;
+    const result = await service.createMany(dto);
+    expect(createManyUserService.manyUsers).toHaveBeenCalledWith(dto);
+    expect(result).toEqual([mockUser]);
+  });
+
+  it('createUserWithBook delegates to the createUserWithBooks provider', async () => {
+    const dto = { email: 'a@b.com', password: 'pw' } as any;
+    const result = await service.createUserWithBook(dto);
+    expect(createUserWithBooks.createUserwithBook).toHaveBeenCalledWith(dto);
+    expect(result).toEqual(mockUser);
+  });
+
+  it('getAllUserWithBook delegates to the createUserWithBooks provider', async () => {
+    const result = await service.getAllUserWithBook();
+    expect(createUserWithBooks.getAllUserWithBook).toHaveBeenCalled();
+    expect(result).toEqual([mockUser]);
+  });
+
+  it('findOneById returns the matching user', async () => {
+    const result = await service.findOneById(42);
+    expect(usersRepository.findOneBy).toHaveBeenCalledWith({ id: 42 });
+    expect(result).toEqual(mockUser);
+  });
+
+  it('findOneById returns null for an unknown id', async () => {
+    usersRepository.findOneBy.mockResolvedValueOnce(null);
+    const result = await service.findOneById(404);
+    expect(result).toBeNull();
   });
 });

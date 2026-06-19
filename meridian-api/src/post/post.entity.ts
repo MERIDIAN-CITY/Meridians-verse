@@ -7,6 +7,7 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
+  DeleteDateColumn,
 } from 'typeorm';
 import { postType } from './Enums/post-type.enum';
 import { PostStatus } from './Enums/post-status.enum';
@@ -63,6 +64,10 @@ export class Post {
   @ManyToMany(() => Tag, (tags) => tags.post)
   @JoinTable()
   tags: Tag[];
+
+  // Soft-delete marker (issue #427): when set the row is hidden from queries
+  @DeleteDateColumn()
+  deletedAt?: Date;
 
   // the joincolumn when used if you check your pg a new column is created shwoing Id of metaoption entity
   // id of metaooptons is joined with Post

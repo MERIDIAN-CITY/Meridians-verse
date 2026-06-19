@@ -22,7 +22,7 @@ export class CreateUserBookProvider {
       // let book = this.bookRepository.create(userDto.book);
       // await this.bookRepository.save(book)
 
-      const existingUserwithEmail = this.userRepository.findOne({
+      const existingUserwithEmail = await this.userRepository.findOne({
         where: [{ email: userDto.email }],
       });
 

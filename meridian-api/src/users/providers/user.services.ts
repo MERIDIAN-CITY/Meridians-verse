@@ -55,14 +55,44 @@ export class UserService {
     return await this.findOneByemail.findOneByEmail(email);
   }
 
-  public async deleteUser() {
-    throw new HttpException(
-      {
-        status: HttpStatus.TEMPORARY_REDIRECT,
-        error: 'User has been removed',
-      },
-      HttpStatus.TEMPORARY_REDIRECT,
-    );
+  /**
+   * Soft-deletes a user (issue #427). TypeORM will hide the row from
+   * subsequent `find*` queries; use `restoreUser` to undo.
+   */
+  public async deleteUser(id: number) {
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: `User with id ${id} not found`,
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    await this.usersRepository.softDelete(id);
+
+    return { deleted: true, id };
+  }
+
+  /**
+   * Restores a soft-deleted user, clearing its `deletedAt` value.
+   */
+  public async restoreUser(id: number) {
+    const result = await this.usersRepository.restore(id);
+
+    if (!result.affected) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: `User with id ${id} was not found or is not soft-deleted`,
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return { restored: true, id };
   }
 
   //finding users by id and userservice was exported in postmodule i.e export:[typeorm,userservice]

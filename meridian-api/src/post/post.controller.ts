@@ -43,10 +43,21 @@ export class PostController {
   }
 
   @Delete()
-  @ApiOperation({ summary: 'Delete a post' })
-  @ApiResponse({ status: 200, description: 'Post deleted successfully' })
+  @ApiOperation({ summary: 'Soft-delete a post (issue #427)' })
+  @ApiResponse({ status: 200, description: 'Post soft-deleted successfully' })
   public deleteOne(@Query('id', ParseIntPipe) id: number) {
     return this.postService.deleteOne(id);
+  }
+
+  @Post('/:id/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted post by ID' })
+  @ApiResponse({ status: 200, description: 'Post restored successfully' })
+  @ApiResponse({
+    status: 404,
+    description: 'Post not found or not soft-deleted',
+  })
+  public restorePost(@Param('id', ParseIntPipe) id: number) {
+    return this.postService.restorePost(id);
   }
 
   @Patch()

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,7 +35,8 @@ export function Header() {
           </nav>
 
           {/* CTA - Desktop */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
             <button className="px-6 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors">
               Sign In
             </button>
@@ -83,6 +85,12 @@ export function Header() {
             >
               Features
             </Link>
+            <div className="flex items-center justify-between gap-2 px-4 pt-2">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Theme
+              </span>
+              <ThemeToggle />
+            </div>
             <button className="w-full px-4 py-2 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
               Get Started
             </button>

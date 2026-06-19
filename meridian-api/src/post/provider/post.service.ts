@@ -56,20 +56,39 @@ export class PostsService {
     return result;
   }
 
-  // =========================
-  // DELETE POST (CACHE INVALIDATION)
-  // =========================
+  /**
+   * Soft-deletes a post (issue #427).
+   * TypeORM automatically excludes rows with a non-null `deletedAt` from
+   * subsequent `find*` calls. Use `restorePost` to undo this operation.
+   */
   public async deleteOne(id: number) {
-    await this.postRepository.delete(id);
+    await this.postRepository.softDelete(id);
 
     await this.clearPostCache();
 
     return { deleted: true, id };
   }
 
-  // =========================
-  // CREATE POST (CACHE INVALIDATION)
-  // =========================
+  /**
+   * Restores a soft-deleted post, clearing its `deletedAt` value so it
+   * reappears in regular queries.
+   */
+  public async restorePost(id: number) {
+    const result = await this.postRepository.restore(id);
+
+    if (!result.affected) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: `Post with id ${id} was not found or is not soft-deleted`,
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return { restored: true, id };
+  }
+
   public async createPost(createpostDto: CreatePostDto) {
     const author = await this.userService.findOneId(createpostDto.authorId);
     const tags = await this.tagService.findMultiTag(createpostDto.tags);
