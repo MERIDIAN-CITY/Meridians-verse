@@ -1,0 +1,145 @@
+name: Envelope Regression Lock CI
+
+# Distinguishes "regression lock firing by design" from real regressions
+# for PR #491's e2e envelope specs. Runs jest against the four
+# envelope regression-lock files, classifies each failure as either
+# "expected-by-design" (firing the issue #426 / #488 lock) or
+# "unexpected" (real regression to investigate), posts a PR comment
+# with the two sets clearly segregated, and fails the job ONLY when
+# an unexpected failure is detected OR when the jest run itself
+# crashed (produced no usable results).
+#
+# All JavaScript bodies (PR-comment posting, fail-job decision) live
+# in scripts/ci-post-pr-comment.mjs and scripts/ci-fail-job.mjs;
+# the workflow file stays focused on plumbing.
+#
+# Depends on PR #488 to be merged on main for the suite to fully pass.
+# Before #488 lands on the PR's base branch, this workflow will produce
+# a green checkmark with PR-comment annotation explaining the
+# expected-by-design failures.
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'meridian-api/test/**'
+      - 'meridian-api/jest.setup.ts'
+      - 'meridian-api/test/jest-e2e.json'
+      - 'meridian-api/package.json'
+      - 'meridian-api/src/common/interceptors/data-response.interceptor.ts'
+      - 'meridian-api/src/common/decorators/api-envelope-response.decorator.ts'
+      - 'meridian-api/src/common/dto/envelope.dto.ts'
+      - 'meridian-api/src/main.ts'
+      - '.github/workflows/envelope-lock-ci.yml'
+      - 'scripts/ci-post-pr-comment.mjs'
+      - 'scripts/ci-fail-job.mjs'
+      - 'scripts/classify-envelope-results.mjs'
+      - 'scripts/render-envelope-summary.mjs'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'meridian-api/test/**'
+      - 'meridian-api/jest.setup.ts'
+      - 'meridian-api/test/jest-e2e.json'
+      - 'meridian-api/package.json'
+      - 'meridian-api/src/common/interceptors/data-response.interceptor.ts'
+
+# Repository-wide defaults: read-only tokens unless overridden per-job.
+permissions:
+  contents: read
+
+jobs:
+  envelope-lock:
+    name: Envelope lock (expected vs unexpected)
+    # Narrowly-scoped write permission for the PR-comment step. Fork
+    # PRs get a read-only token and the script's 403 short-circuit
+    # handles them gracefully.
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    # Job-level env (not defaults.run, which GH Actions doesn't allow).
+    # All shell steps below use `|` literal block scalars.
+    env:
+      CLASSIFIED_FILE: /tmp/envelope-classified.json
+      CI: 'true'
+      NO_COLOR: '1'
+      FORCE_COLOR: '0'
+
+    defaults:
+      run:
+        working-directory: meridian-api
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: meridian-api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run envelope regression-lock specs (capture JSON output)
+        # `|| true` so jest's non-zero exit on test failures does not
+        # abort the workflow — we still want post + classification to
+        # run for expected-only failures. Crash detection (empty JSON,
+        # numTotalTests=0) is handled by the next step + the classifier
+        # itself.
+        id: jest
+        run: |
+          ./node_modules/.bin/jest \
+            --config ./test/jest-e2e.json \
+            --json --outputFile=/tmp/envelope-results.json \
+            --testPathPattern data-response.interceptor(\.|\.post\.|\.tweets\.|\.auth\.)e2e-spec\.ts$ \
+            || true
+
+      - name: Validate jest produced usable output
+        # Guard against ts-jest / setupFiles crash that would otherwise
+        # leave an empty JSON file. The classifier itself also detects
+        # this, but failing fast here gives a clearer workflow log.
+        run: |
+          if [ ! -s /tmp/envelope-results.json ]; then
+            echo "::error::jest produced no output at /tmp/envelope-results.json";
+            exit 1;
+          fi;
+          TOTAL=$(node -e "console.log(require('/tmp/envelope-results.json').numTotalTests ?? 0)");
+          if [ "$TOTAL" = "0" ]; then
+            echo "::error::jest reported 0 total tests — likely a runner crash, not a test failure";
+            exit 1;
+          fi;
+          echo "jest reported $TOTAL total tests."
+
+      - name: "Classify failures: lock-firing-by-design vs real regressions"
+        # Step names that contain `: ` literals must be quoted;
+        # unquoted colons inside the name confuse the YAML parser's
+        # flow-mapping scanner at list-item boundaries.
+        id: classify
+        run: node ../scripts/classify-envelope-results.mjs /tmp/envelope-results.json "$CLASSIFIED_FILE"
+
+      - name: Embed summary in workflow run page ($GITHUB_STEP_SUMMARY)
+        # Visible in the Actions tab → workflow run → Summary panel.
+        # Belt-and-braces: even on fork PRs where PR-comment posting
+        # silently no-ops, the run-summary section still surfaces.
+        run: |
+          node ../scripts/render-envelope-summary.mjs \
+            "$CLASSIFIED_FILE" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post or update PR comment with the classification table
+        # Heavy lifting lives in scripts/ci-post-pr-comment.mjs so the
+        # workflow file stays focused on plumbing.
+        if: github.event_name == 'pull_request'
+        run: node ../scripts/ci-post-pr-comment.mjs
+
+      - name: Fail the job on real regression OR jest crash
+        # Decision logic lives in scripts/ci-fail-job.mjs. Exits 0
+        # (green) when all failures are expected-by-design; exits 1
+        # (red) when any failure is classified as unexpected OR the
+        # jest run crashed.
+        run: node ../scripts/ci-fail-job.mjs
