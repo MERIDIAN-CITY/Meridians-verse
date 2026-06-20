@@ -156,6 +156,8 @@ npm install
 npm run dev
 ```
 
+> [`bcrypt`](meridian-api/package.json) requires `pnpm install` with `pnpm.onlyBuiltDependencies` enabled in `meridian-api/package.json`, or a prior `npm install`, to compile its native binding on pnpm 10+.
+
 **Required environment variables:** Stellar network config, Soroban RPC URL, Supabase URL + anon key, deployed contract addresses, WalletConnect project ID.
 
 ---
