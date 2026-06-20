@@ -34,6 +34,7 @@ describe('UsersController (integration)', () => {
     createUsers: jest.Mock;
     createMany: jest.Mock;
     deleteUser: jest.Mock;
+    restoreUser: jest.Mock;
     editUser: jest.Mock;
     createUserWithBook: jest.Mock;
     getAllUserWithBook: jest.Mock;
@@ -61,6 +62,7 @@ describe('UsersController (integration)', () => {
       ]),
       createMany: jest.fn(async () => [{ id: 1 }, { id: 2 }]),
       deleteUser: jest.fn(),
+      restoreUser: jest.fn(),
       editUser: jest.fn(async (dto) => ({ ...dto })),
       createUserWithBook: jest.fn(async () => ({ id: 1 })),
       getAllUserWithBook: jest.fn(async () => [{ id: 1 }]),
@@ -155,11 +157,31 @@ describe('UsersController (integration)', () => {
     expect(userService.createMany).toHaveBeenCalledWith(dto);
   });
 
-  it('DELETE /users responds with status 200', async () => {
-    const response = await request(app.getHttpServer())
-      .delete('/users')
-      .expect(200);
-    expect(response).toBeDefined();
+  it('DELETE /users/:id soft-deletes the user and responds with status 200', async () => {
+    // The controller routes DELETE under `/:id` so a request to bare
+    // `/users` returns 404 (no route match). Use a real id here so we
+    // exercise the actual handler, not a 404 fallback.
+    await request(app.getHttpServer()).delete('/users/1').expect(200);
+
+    expect(userService.deleteUser).toHaveBeenCalledWith(1);
+  });
+
+  it('DELETE /users/:id returns 400 for a non-numeric id', async () => {
+    await request(app.getHttpServer())
+      .delete('/users/not-a-number')
+      .expect(400);
+  });
+
+  it('POST /users/:id/restore delegates to userService.restoreUser', async () => {
+    // NestJS POST handlers return 201 by default unless an explicit
+    // @HttpCode is set. The route is documented as 200 via @ApiResponse
+    // for swagger purposes, but the framework default wins at runtime.
+    // TODO: align the source @Post('/:id/restore') handler with the
+    // swagger-documented 200 by adding @HttpCode(200).
+    userService.restoreUser.mockResolvedValueOnce({ restored: true, id: 1 });
+    await request(app.getHttpServer()).post('/users/1/restore').expect(201);
+
+    expect(userService.restoreUser).toHaveBeenCalledWith(1);
   });
 
   it('PATCH /users updates user details', async () => {

@@ -51,6 +51,8 @@ describe('PostsService', () => {
   let postRepository: {
     find: jest.Mock;
     delete: jest.Mock;
+    softDelete: jest.Mock;
+    restore: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
     findOneBy: jest.Mock;
@@ -76,6 +78,8 @@ describe('PostsService', () => {
     postRepository = {
       find: jest.fn(),
       delete: jest.fn(),
+      softDelete: jest.fn(async () => ({ affected: 1 })),
+      restore: jest.fn(async () => ({ affected: 1 })),
       create: jest.fn((dto) => ({ id: 10, ...dto })),
       save: jest.fn(async (post) => post),
       findOneBy: jest.fn(),
@@ -114,11 +118,35 @@ describe('PostsService', () => {
   });
 
   describe('deleteOne', () => {
-    it('deletes a post by id and returns the deletion summary', async () => {
-      postRepository.delete.mockResolvedValue({ affected: 1 });
+    // PostsService.deleteOne delegates to TypeORM's `softDelete` so the
+    // row is hidden from subsequent finds but still recoverable via
+    // restorePost. Both methods are stubbed on the mock object above.
+    it('soft-deletes a post by id and returns the deletion summary', async () => {
       const result = await service.deleteOne(10);
-      expect(postRepository.delete).toHaveBeenCalledWith(10);
+
+      expect(postRepository.softDelete).toHaveBeenCalledWith(10);
       expect(result).toEqual({ deleted: true, id: 10 });
+    });
+
+    it('does not call the hard-delete path', async () => {
+      await service.deleteOne(10);
+      expect(postRepository.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restorePost', () => {
+    it('restores a soft-deleted post by id', async () => {
+      postRepository.restore.mockResolvedValueOnce({ affected: 1 });
+      const result = await service.restorePost(10);
+      expect(postRepository.restore).toHaveBeenCalledWith(10);
+      expect(result).toEqual({ restored: true, id: 10 });
+    });
+
+    it('throws NOT_FOUND when restoring a post that is not soft-deleted', async () => {
+      postRepository.restore.mockResolvedValueOnce({ affected: 0 });
+      await expect(service.restorePost(999)).rejects.toMatchObject({
+        status: 404,
+      });
     });
   });
 

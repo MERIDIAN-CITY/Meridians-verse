@@ -34,6 +34,8 @@ describe('UserService', () => {
     find: jest.Mock;
     findOneBy: jest.Mock;
     save: jest.Mock;
+    softDelete: jest.Mock;
+    restore: jest.Mock;
   };
   let createuserprovider: { createUsers: jest.Mock };
   let findOneByemail: { findOneByEmail: jest.Mock };
@@ -56,6 +58,8 @@ describe('UserService', () => {
       find: jest.fn(async () => [mockUser]),
       findOneBy: jest.fn(async () => mockUser),
       save: jest.fn(async (u) => u),
+      softDelete: jest.fn(async () => ({ affected: 1 })),
+      restore: jest.fn(async () => ({ affected: 1 })),
     };
     createuserprovider = { createUsers: jest.fn(async () => [mockUser]) };
     findOneByemail = { findOneByEmail: jest.fn(async () => mockUser) };
@@ -132,8 +136,32 @@ describe('UserService', () => {
     });
   });
 
-  it('deleteUser throws HttpException', async () => {
-    await expect(service.deleteUser()).rejects.toThrow(HttpException);
+  it('deleteUser throws HttpException when the user is missing', async () => {
+    // The source throws a NOT_FOUND HttpException BEFORE invoking
+    // `softDelete`, so we only need to mock `findOneBy` to return
+    // null for this test. This is the actual behavior exercised by
+    // production callers (soft-delete with 404 sentinel).
+    usersRepository.findOneBy.mockResolvedValueOnce(null);
+    await expect(service.deleteUser(99)).rejects.toThrow(HttpException);
+  });
+
+  it('deleteUser soft-deletes an existing user and returns the summary', async () => {
+    // Happy path: findOneBy returns the stored user (default mock), so
+    // softDelete is invoked and the service returns the summary.
+    const result = await service.deleteUser(1);
+    expect(usersRepository.softDelete).toHaveBeenCalledWith(1);
+    expect(result).toEqual({ deleted: true, id: 1 });
+  });
+
+  it('restoreUser throws NOT_FOUND when no row is affected', async () => {
+    usersRepository.restore.mockResolvedValueOnce({ affected: 0 });
+    await expect(service.restoreUser(123)).rejects.toThrow(HttpException);
+  });
+
+  it('restoreUser returns the restored summary on success', async () => {
+    usersRepository.restore.mockResolvedValueOnce({ affected: 1 });
+    const result = await service.restoreUser(1);
+    expect(result).toEqual({ restored: true, id: 1 });
   });
 
   it('createMany delegates to the createManyUserService', async () => {
