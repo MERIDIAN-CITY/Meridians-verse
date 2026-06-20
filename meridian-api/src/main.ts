@@ -20,16 +20,26 @@ async function bootstrap() {
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   const allowedOriginsString = configService.get<string>('ALLOWED_ORIGINS');
   const allowedOrigins = allowedOriginsString
-    ? allowedOriginsString.split(',').map(origin => origin.trim())
+    ? allowedOriginsString.split(',').map((origin) => origin.trim())
     : [];
-  
+
   // In development, we can allow all origins if no ALLOWED_ORIGINS is set
   // In production, we strictly enforce allowed origins
-  let corsOrigin: boolean | string | string[] | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void);
+  let corsOrigin:
+    | boolean
+    | string
+    | string[]
+    | ((
+        origin: string,
+        callback: (err: Error | null, allow?: boolean) => void,
+      ) => void);
   if (nodeEnv === 'development' && allowedOrigins.length === 0) {
     corsOrigin = true;
   } else {
-    corsOrigin = (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+    corsOrigin = (
+      origin: string,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -56,11 +66,30 @@ async function bootstrap() {
   );
 
   // Swagger configuration
+  //
+  // Every controller response in this API is wrapped in a uniform
+  // envelope by the global DataResponseInterceptor (registered below).
+  // The envelope is documented per-endpoint via the @ApiEnvelopeResponse
+  // decorator — see meridian-api/src/common/dto/envelope.dto.ts and
+  // meridian-api/src/common/decorators/api-envelope-response.decorator.ts.
   const config = new DocumentBuilder()
     .setTitle('Meridian API') // Add a title
     .setDescription(
-      'Productivity-powered on-chain economy built on the Stellar blockchain.',
-    ) // Add a description
+      [
+        'Productivity-powered on-chain economy built on the Stellar blockchain.',
+        '',
+        '## Response envelope',
+        '',
+        'Every successful response is wrapped in a standard envelope of the form',
+        '`{ apiversion, result, data }`. See the `EnvelopeDto` schema and the',
+        'per-endpoint examples for the concrete shape of `data`.',
+        '',
+        '- `apiversion` (string) – the API version that produced the response.',
+        '- `result`     (number) – count of records in `data`; `data.length` for',
+        '  arrays, `1` for a single object or primitive, `0` when `data` is `null`.',
+        '- `data`       (any)    – the unwrapped controller payload.',
+      ].join('\n'),
+    )
     .setTermsOfService('http://localhost:3000/terms of service')
     .setVersion('1.0') // Set the API version
     .addBearerAuth()

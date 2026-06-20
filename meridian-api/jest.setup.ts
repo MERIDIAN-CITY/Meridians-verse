@@ -98,51 +98,33 @@ jest.mock(
 );
 
 // ----- Entities (aliased paths) -----
-jest.mock(
-  'src/users/user.entity',
-  () => ({ User: class User {} }),
-  { virtual: true },
-);
-jest.mock(
-  'src/post/post.entity',
-  () => ({ Post: class Post {} }),
-  { virtual: true },
-);
-jest.mock(
-  'src/tweets/dto/tweet.entity',
-  () => ({ Tweet: class Tweet {} }),
-  { virtual: true },
-);
+jest.mock('src/users/user.entity', () => ({ User: class User {} }), {
+  virtual: true,
+});
+jest.mock('src/post/post.entity', () => ({ Post: class Post {} }), {
+  virtual: true,
+});
+jest.mock('src/tweets/dto/tweet.entity', () => ({ Tweet: class Tweet {} }), {
+  virtual: true,
+});
 jest.mock(
   'src/tweets/entities/tweet.entity',
   () => ({ Tweet: class Tweet {} }),
   { virtual: true },
 );
-jest.mock(
-  'src/tag/tag.entity',
-  () => ({ Tag: class Tag {} }),
-  { virtual: true },
-);
-jest.mock(
-  'src/metaoption/metaoption.entity',
-  () => ({}),
-  { virtual: true },
-);
-jest.mock(
-  'src/metaoption/dto/create-post-meta-options.dto',
-  () => ({}),
-  { virtual: true },
-);
-jest.mock(
-  'src/metaoption/dto/update-post-meta-options.dto',
-  () => ({}),
-  { virtual: true },
-);
-jest.mock(
-  'src/metaoption/metaoption.controller',
-  () => ({}),
-  { virtual: true },
-);
+jest.mock('src/tag/tag.entity', () => ({ Tag: class Tag {} }), {
+  virtual: true,
+});
+jest.mock('src/metaoption/metaoption.entity', () => ({}), { virtual: true });
+jest.mock('src/metaoption/dto/create-post-meta-options.dto', () => ({}), {
+  virtual: true,
+});
+jest.mock('src/metaoption/dto/update-post-meta-options.dto', () => ({}), {
+  virtual: true,
+});
+jest.mock('src/metaoption/metaoption.controller', () => ({}), {
+  virtual: true,
+});
 
 // ----- Services referenced through aliased paths -----
 jest.mock(
@@ -196,19 +178,15 @@ jest.mock(
   () => ({ PatchPostDto: class PatchPostDto {} }),
   { virtual: true },
 );
-jest.mock(
-  'src/DTO/getPostdto',
-  () => ({ GetPostsDto: class GetPostsDto {} }),
-  { virtual: true },
-);
+jest.mock('src/DTO/getPostdto', () => ({ GetPostsDto: class GetPostsDto {} }), {
+  virtual: true,
+});
 jest.mock('src/DTO/signin-dto', () => ({}), { virtual: true });
 
 // ----- Relative paths used by the spec files -----
-jest.mock(
-  '../users/user.entity',
-  () => ({ User: class User {} }),
-  { virtual: true },
-);
+jest.mock('../users/user.entity', () => ({ User: class User {} }), {
+  virtual: true,
+});
 jest.mock(
   '../users/providers/user.services',
   () => ({ UserService: class UserService {} }),
@@ -224,11 +202,9 @@ jest.mock(
   () => ({ AuthService: class AuthService {} }),
   { virtual: true },
 );
-jest.mock(
-  '../post/post.entity',
-  () => ({ Post: class Post {} }),
-  { virtual: true },
-);
+jest.mock('../post/post.entity', () => ({ Post: class Post {} }), {
+  virtual: true,
+});
 jest.mock(
   '../post/provider/post.service',
   () => ({ PostsService: class PostsService {} }),
@@ -260,11 +236,25 @@ jest.mock(
   () => ({ UserService: class UserService {} }),
   { virtual: true },
 );
-jest.mock(
-  './dtos/createManyUserdto',
-  () => ({}),
-  { virtual: true },
-);
+jest.mock('./dtos/createManyUserdto', () => ({}), { virtual: true });
 jest.mock('./dto/tweet.entity', () => ({ Tweet: class Tweet {} }), {
   virtual: true,
 });
+
+// ----- Common envelope decorator (no-op stub so specs can keep
+//        loading controllers that import @ApiEnvelopeResponse
+//        without pulling in the real Swagger metadata at runtime) -----
+jest.mock(
+  'src/common/decorators/api-envelope-response.decorator',
+  () => ({
+    ApiEnvelopeResponse:
+      () =>
+      (
+        _target: unknown,
+        _key?: string | symbol,
+        _descriptor?: PropertyDescriptor,
+      ) =>
+        _descriptor,
+  }),
+  { virtual: true },
+);

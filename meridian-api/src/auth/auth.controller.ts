@@ -18,6 +18,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AccessTokenGuard } from './guard/access-token/access-token.guard';
 import { REQUEST_USER_KEY } from './constant/auth-constant';
 import { Request } from 'express';
+import { ApiEnvelopeResponse } from 'src/common/decorators/api-envelope-response.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -28,10 +29,13 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 15000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Sign in with user credentials' })
-  @ApiResponse({
-    status: 200,
+  @ApiEnvelopeResponse({
+    dataExample: {
+      accessToken: 'eyJhbGciOi...',
+      refreshToken: 'rt_abc123',
+    },
     description:
-      'Successfully authenticated, returns access token and refresh token',
+      'Successfully authenticated; returns access token and refresh token.',
   })
   @ApiResponse({
     status: 401,
@@ -45,7 +49,10 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh Auth Token' })
-  @ApiResponse({ status: 200, description: 'Successfully refreshed token' })
+  @ApiEnvelopeResponse({
+    dataExample: { accessToken: 'eyJhbGciOi...' },
+    description: 'Successfully refreshed token.',
+  })
   @ApiResponse({
     status: 429,
     description: 'Too Many Requests - Limit 10 attempts per minute',
@@ -65,9 +72,9 @@ export class AuthController {
   @Post('/logout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Revoke the current refresh token' })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully revoked refresh token',
+  @ApiEnvelopeResponse({
+    dataExample: { revoked: true },
+    description: 'Successfully revoked refresh token.',
   })
   @ApiResponse({
     status: 401,
@@ -81,9 +88,9 @@ export class AuthController {
   @UseGuards(AccessTokenGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Revoke all refresh tokens for the current user' })
-  @ApiResponse({
-    status: 200,
-    description: 'Successfully revoked all sessions',
+  @ApiEnvelopeResponse({
+    dataExample: { revokedAll: true, count: 3 },
+    description: 'Successfully revoked all sessions.',
   })
   public async logoutAll(@Req() req: Request) {
     const user = req[REQUEST_USER_KEY] as { sub?: string | number };
@@ -102,7 +109,10 @@ export class AuthController {
   @ApiOperation({
     summary: 'Verify email with one-time token from signup mail',
   })
-  @ApiResponse({ status: 200, description: 'Email verified' })
+  @ApiEnvelopeResponse({
+    dataExample: { verified: true, email: 'user@example.com' },
+    description: 'Email verified.',
+  })
   @ApiResponse({
     status: 401,
     description: 'Invalid or expired verification token',
@@ -116,10 +126,10 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend the email verification mail' })
-  @ApiResponse({
-    status: 200,
+  @ApiEnvelopeResponse({
+    dataExample: { accepted: true },
     description:
-      'Acknowledgement — never reveals whether the email is registered',
+      'Acknowledgement — never reveals whether the email is registered.',
   })
   public async resendVerification(
     @Body() resendVerificationDto: ResendVerificationDto,

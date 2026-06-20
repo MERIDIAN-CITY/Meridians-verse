@@ -2,17 +2,13 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Delete,
   Param,
   Query,
   Body,
   ParseIntPipe,
   DefaultValuePipe,
-  ValidationPipe,
   Patch,
-  UseGuards,
-  SetMetadata,
   UseInterceptors,
   ClassSerializerInterceptor,
 } from '@nestjs/common';
@@ -27,10 +23,10 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { AccessTokenGuard } from 'src/auth/guard/access-token/access-token.guard';
 import { Auth } from 'src/auth/decorators/auth/auth.decorator';
 import { AuthType } from 'src/auth/enums/auth-type.enum';
 import { CreateManyUsersDto } from './dto/create-many-users.dto';
+import { ApiEnvelopeResponse } from 'src/common/decorators/api-envelope-response.decorator';
 
 @Controller('users')
 // line 14 is a method
@@ -45,9 +41,16 @@ export class UsersController {
   // to search on url for params and query
 
   // performing api description for @Get which displays in our swagger in the browser
-  @ApiResponse({
-    status: 200,
-    description: 'users fetched successfully based on the query',
+  @ApiEnvelopeResponse({
+    dataExample: [
+      {
+        id: 1,
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane@example.com',
+      },
+    ],
+    description: 'Users fetched successfully based on the query.',
   })
   @ApiOperation({
     summary: 'Fetch all the users',
@@ -82,7 +85,18 @@ export class UsersController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new user' })
-  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    dataExample: [
+      {
+        id: 1,
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane@example.com',
+      },
+    ],
+    description: 'User created successfully.',
+  })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @UseInterceptors(ClassSerializerInterceptor)
   // @SetMetadata('authType, 'None')
@@ -94,7 +108,11 @@ export class UsersController {
 
   @Post('/many-users')
   @ApiOperation({ summary: 'Create multiple users' })
-  @ApiResponse({ status: 201, description: 'Users created successfully' })
+  @ApiEnvelopeResponse({
+    status: 201,
+    dataExample: [{ id: 1 }, { id: 2 }],
+    description: 'Users created successfully.',
+  })
   @ApiResponse({ status: 400, description: 'Bad request' })
   public createMany(@Body() createManyUserDto: CreateManyUsersDto) {
     return this.userService.createMany(createManyUserDto);
@@ -102,7 +120,10 @@ export class UsersController {
 
   @Delete('/:id')
   @ApiOperation({ summary: 'Soft-delete a user by ID (issue #427)' })
-  @ApiResponse({ status: 200, description: 'User soft-deleted successfully' })
+  @ApiEnvelopeResponse({
+    dataExample: { deleted: true, id: 1 },
+    description: 'User soft-deleted successfully.',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   public deleteUsers(@Param('id', ParseIntPipe) id: number) {
     return this.userService.deleteUser(id);
@@ -110,7 +131,10 @@ export class UsersController {
 
   @Post('/:id/restore')
   @ApiOperation({ summary: 'Restore a soft-deleted user by ID' })
-  @ApiResponse({ status: 200, description: 'User restored successfully' })
+  @ApiEnvelopeResponse({
+    dataExample: { restored: true, id: 1 },
+    description: 'User restored successfully.',
+  })
   @ApiResponse({
     status: 404,
     description: 'User not found or not soft-deleted',
@@ -121,7 +145,10 @@ export class UsersController {
 
   @Patch()
   @ApiOperation({ summary: 'Update user details' })
-  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  @ApiEnvelopeResponse({
+    dataExample: { id: 1, firstName: 'Updated' },
+    description: 'User updated successfully.',
+  })
   @ApiResponse({ status: 400, description: 'Bad request' })
   public editedPost(@Body() edituserDto: EditUserDto) {
     return this.userService.editUser(edituserDto);
@@ -129,9 +156,10 @@ export class UsersController {
 
   @Post('/with-book')
   @ApiOperation({ summary: 'Create user with a default book entry' })
-  @ApiResponse({
+  @ApiEnvelopeResponse({
     status: 201,
-    description: 'User and book created successfully',
+    dataExample: { id: 1 },
+    description: 'User and book created successfully.',
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   public createUserWithBook(@Body() userDto: CreateUserDto) {
@@ -140,9 +168,9 @@ export class UsersController {
 
   @Get('/with-book')
   @ApiOperation({ summary: 'Fetch all users with their books' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of users with books retrieved successfully',
+  @ApiEnvelopeResponse({
+    dataExample: [{ id: 1 }],
+    description: 'List of users with books retrieved successfully.',
   })
   public getAllUsersWithBook() {
     return this.userService.getAllUserWithBook();
@@ -150,7 +178,10 @@ export class UsersController {
 
   @Get('find/:id')
   @ApiOperation({ summary: 'Fetch a single user by ID' })
-  @ApiResponse({ status: 200, description: 'User retrieved successfully' })
+  @ApiEnvelopeResponse({
+    dataExample: { id: 1, firstName: 'Jane' },
+    description: 'User retrieved successfully.',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   public getUserbyId(@Param('id', ParseIntPipe) id: number) {
     return this.userService.findOneById(id);
