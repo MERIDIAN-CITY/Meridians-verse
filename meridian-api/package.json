@@ -97,7 +97,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "bcrypt"
+      "bcrypt",
+      "mysql2"
     ]
   }
 }
