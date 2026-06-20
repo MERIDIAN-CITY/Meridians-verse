@@ -10,12 +10,27 @@
  * envelope and the response is never a 500 due to a TypeError in the
  * interceptor.
  *
- * Special plumbing notes:
+ * Guard override notes:
  *
- *   - `AccessTokenGuard` is referenced via
- *     `@UseGuards(AccessTokenGuard)` on the `logoutAll` route. We mock
- *     the guard to `canActivate() => true` so its JWT verification
- *     chain doesn't need to boot inside the e2e test app.
+ *   - `AuthController.logoutAll` declares `@UseGuards(AccessTokenGuard)`.
+ *     The real guard has a `JwtService` constructor dependency that
+ *     requires `@Inject('JWT_SECRET')` + JwtModule registration to boot.
+ *     We replace the guard entirely via NestJS's
+ *     `.overrideGuard(AccessTokenGuard).useValue(...)` chain — this
+ *     prevents NestJS from ever invoking the real guard's constructor,
+ *     so neither JwtService nor the JWT_SECRET token needs to be in
+ *     scope. The override replicates the real guard's contract: it
+ *     stamps a verified JWT payload onto `req.user` so the controller's
+ *     `req.user.sub` lookup resolves and the handler reaches
+ *     `authService.logoutAll(sub)`.
+ *
+ *   - A previous attempt used `jest.mock('src/auth/guard/...access-token.guard',
+ *     { virtual: true })` — but the controller imports the guard via a
+ *     relative path (`'../auth/guard/access-token/access-token.guard'`),
+ *     so the virtual-path mock never intercepted the controller's import.
+ *     `overrideGuard` is the canonical NestJS pattern and avoids the
+ *     path-mismatch trap entirely.
+ *
  *   - `@Throttle()` decorators from `@nestjs/throttler` are inert in
  *     our isolated test app because `ThrottlerGuard` (registered via
  *     `APP_GUARD` in AppModule) is NOT installed here. They're
@@ -39,30 +54,9 @@ import {
   expectNoEnvelopeKeys,
 } from './helpers/envelope-assert.helper';
 import { DataResponseInterceptor } from '../src/common/interceptors/data-response.interceptor';
+import { AccessTokenGuard } from '../src/auth/guard/access-token/access-token.guard';
 import { AuthController } from '../src/auth/auth.controller';
 import { AuthService } from '../src/auth/providers/auth.service';
-
-// Mock AccessTokenGuard so the @UseGuards() decorator on `logoutAll`
-// doesn't pull JwtService + jwt.config into the test app. The mock
-// faithfully reproduces the real guard's contract: it stamps a
-// verified JWT payload onto req[REQUEST_USER_KEY] so the controller's
-// `req[REQUEST_USER_KEY].sub` lookup succeeds and the handler
-// reaches `authService.logoutAll(sub)`.
-jest.mock(
-  'src/auth/guard/access-token/access-token.guard',
-  () => ({
-    AccessTokenGuard: class AccessTokenGuard {
-      canActivate(context: {
-        switchToHttp: () => { getRequest: () => Record<string, unknown> };
-      }): boolean {
-        const req = context.switchToHttp().getRequest();
-        req['user'] = { sub: 42 };
-        return true;
-      }
-    },
-  }),
-  { virtual: true },
-);
 
 // jest.setup.ts (wired in via jest-e2e.json `setupFiles`) already stubs
 // AuthService class, UserService class, all auth provider modules
@@ -110,7 +104,23 @@ describe('DataResponseInterceptor (e2e, AuthController slice, issue #426 regress
         { provide: AuthService, useValue: authService },
         { provide: APP_INTERCEPTOR, useClass: DataResponseInterceptor },
       ],
-    }).compile();
+    })
+      .overrideGuard(AccessTokenGuard)
+      .useValue({
+        canActivate: (
+          context: {
+            switchToHttp: () => { getRequest: () => Record<string, unknown> };
+          },
+        ): boolean => {
+          // Replicates the real guard's contract: stamps the verified
+          // JWT payload onto req.user so the @UseGuards-protected
+          // logoutAll handler reaches authService.logoutAll().
+          const req = context.switchToHttp().getRequest();
+          req['user'] = { sub: 42 };
+          return true;
+        },
+      })
+      .compile();
 
     app = moduleRef.createNestApplication();
     await app.init();
@@ -168,9 +178,9 @@ describe('DataResponseInterceptor (e2e, AuthController slice, issue #426 regress
     });
 
     it('POST /auth/logout-all (guarded) -> { apiversion, result: 1, data: <summary> }', async () => {
-      // The mocked AccessTokenGuard stamps req[REQUEST_USER_KEY] with
-      // { sub: 42 } so the handler reaches authService.logoutAll(42)
-      // and the success envelope is what we lock.
+      // The overrideGuard stamps req.user with { sub: 42 } so the
+      // handler reaches authService.logoutAll(42) and the success
+      // envelope is what we lock.
       const response = await request(app.getHttpServer()).post(
         '/auth/logout-all',
       );
