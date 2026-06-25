@@ -157,9 +157,9 @@ describe('UsersController (integration)', () => {
     expect(userService.createMany).toHaveBeenCalledWith(dto);
   });
 
-  it('DELETE /users responds with status 200', async () => {
+  it('DELETE /users/:id responds with status 200', async () => {
     const response = await request(app.getHttpServer())
-      .delete('/users')
+      .delete('/users/1')
       .expect(200);
     expect(response).toBeDefined();
   });
@@ -249,17 +249,25 @@ describe('UsersController POST /users password validation via ValidationPipe (is
   const extractErrorRows = (body: {
     errors?: unknown;
   }): ValidationErrorRow[] =>
-    Array.isArray(body.errors)
-      ? body.errors.filter(isValidationErrorRow)
-      : [];
+    Array.isArray(body.errors) ? body.errors.filter(isValidationErrorRow) : [];
 
   beforeEach(async () => {
     userServiceMock = {
       createUsers: jest.fn(async () => [
-        { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@example.com' },
+        {
+          id: 1,
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john.doe@example.com',
+        },
       ]),
       editUser: jest.fn(async () => [
-        { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@example.com' },
+        {
+          id: 1,
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john.doe@example.com',
+        },
       ]),
     };
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -339,7 +347,9 @@ describe('UsersController POST /users password validation via ValidationPipe (is
     const rows = extractErrorRows(response.body);
     expect(rows.length).toBeGreaterThan(0);
     // The `matches` constraint's .{8,16} anchor surface for too-short input.
-    expect(rows.some((r) => r.field === 'password' && r.constraint === 'matches')).toBe(true);
+    expect(
+      rows.some((r) => r.field === 'password' && r.constraint === 'matches'),
+    ).toBe(true);
   });
 
   it('returns 400 when the password is too long (> 16 chars)', async () => {
@@ -357,7 +367,9 @@ describe('UsersController POST /users password validation via ValidationPipe (is
     expect(response.body.message).toBe('Validation failed');
     const rows = extractErrorRows(response.body);
     expect(rows.length).toBeGreaterThan(0);
-    expect(rows.some((r) => r.field === 'password' && r.constraint === 'matches')).toBe(true);
+    expect(
+      rows.some((r) => r.field === 'password' && r.constraint === 'matches'),
+    ).toBe(true);
   });
 
   it('returns 400 with a row per failing field when multiple fields are invalid', async () => {

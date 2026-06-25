@@ -1,15 +1,17 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
-import { GetPostsParamDto } from 'src/post/dto/post-param.dto';
 import { EditUserDto } from '../dto/patch-user.dto';
 import { CreateUserProvider } from './create-user.provider';
 import { FindOneByEmail } from './find-one-by-email';
 import { CreateManyUser } from './createManyUser.Provider';
 import { CreateManyUsersDto } from '../dto/create-many-users.dto';
 import { CreateUserBookProvider } from './createUserWithBook';
+import { GetuserParamDto } from '../dto/user-param.dto';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class UserService {
@@ -26,27 +28,45 @@ export class UserService {
 
     // depedency injection of createManyUsers
     private readonly createManyUserService: CreateManyUser,
+
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
   // repository pattern that help commiunicate with the Database
   // just by doing this we have injected a repository pattern
 
-  public findAll(
-    getUserParamDto: GetPostsParamDto,
-    limit: number,
-    page: number,
+  public async findAll(
+    _getuserParamDto: GetuserParamDto,
+    _limit: number,
+    _page: number,
   ): Promise<User[]> {
-    return this.usersRepository.find();
+    const cachedUsers = await this.cacheManager.get<User[]>('users_all');
+    if (cachedUsers) {
+      return cachedUsers;
+    }
+    const users = await this.usersRepository.find();
+    await this.cacheManager.set('users_all', users, 300);
+    return users;
   }
 
   // inject Hasingprovider
 
   public async createUsers(createUserDto: CreateUserDto) {
-    return this.createuserprovider.createUsers(createUserDto);
+    const user = await this.createuserprovider.createUsers(createUserDto);
+    await this.cacheManager.del('users_all');
+    return user;
   }
 
   public async GetOneByEmail(email: string) {
-    //fineoneby email first one is provider second a method in the provider
-    return await this.findOneByemail.findOneByEmail(email);
+    const cachedUser = await this.cacheManager.get<User>(`user_email_${email}`);
+    if (cachedUser) {
+      return cachedUser;
+    }
+    const user = await this.findOneByemail.findOneByEmail(email);
+    if (user) {
+      await this.cacheManager.set(`user_email_${email}`, user, 600);
+      await this.cacheManager.set(`user_${user.id}`, user, 600);
+    }
+    return user;
   }
 
   /**
@@ -66,6 +86,8 @@ export class UserService {
     }
 
     await this.usersRepository.softDelete(id);
+    await this.cacheManager.del(`user_${id}`);
+    await this.cacheManager.del('users_all');
 
     return { deleted: true, id };
   }
@@ -85,12 +107,17 @@ export class UserService {
         HttpStatus.NOT_FOUND,
       );
     }
+    await this.cacheManager.del(`user_${id}`);
 
     return { restored: true, id };
   }
 
   //finding users by id and userservice was exported in postmodule i.e export:[typeorm,userservice]
   public async findOneId(id: number): Promise<User | null> {
+    const cachedUser = await this.cacheManager.get<User>(`user_${id}`);
+    if (cachedUser) {
+      return cachedUser;
+    }
     const user = await this.usersRepository.findOneBy({ id });
 
     if (!user) {
@@ -107,6 +134,7 @@ export class UserService {
       );
     }
 
+    await this.cacheManager.set(`user_${id}`, user, 600);
     return user;
   }
 
@@ -116,21 +144,41 @@ export class UserService {
       id: edituserDto.id,
     });
 
+    if (!edit) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: `User with id ${edituserDto.id} not found`,
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
     edit.firstName = edituserDto.firstName ?? edit.firstName;
     edit.lastName = edituserDto.lastName ?? edit.lastName;
     edit.password = edituserDto.password ?? edit.password;
     edit.email = edituserDto.email ?? edit.email;
 
-    return this.usersRepository.save(edit);
+    const updatedUser = await this.usersRepository.save(edit);
+    await this.cacheManager.del(`user_${edituserDto.id}`);
+    await this.cacheManager.del('users_all');
+    if (edituserDto.email) {
+      await this.cacheManager.del(`user_email_${edit.email}`);
+    }
+    return updatedUser;
   }
 
   public async createMany(createManyUserDto: CreateManyUsersDto) {
-    return await this.createManyUserService.manyUsers(createManyUserDto);
+    const users = await this.createManyUserService.manyUsers(createManyUserDto);
+    await this.cacheManager.del('users_all');
+    return users;
   }
 
   //PRACTCE FOR ONE TO ONE RELATIONSHIP BTW USER AND BOOK ENTITY
   public async createUserWithBook(userDto: CreateUserDto) {
-    return await this.createUserWithBooks.createUserwithBook(userDto);
+    const user = await this.createUserWithBooks.createUserwithBook(userDto);
+    await this.cacheManager.del('users_all');
+    return user;
   }
 
   public async getAllUserWithBook() {

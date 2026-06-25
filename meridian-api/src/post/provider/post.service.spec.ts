@@ -54,10 +54,13 @@ describe('PostsService', () => {
     create: jest.Mock;
     save: jest.Mock;
     findOneBy: jest.Mock;
+    softDelete: jest.Mock;
+    restore: jest.Mock;
   };
   let userService: { findOneId: jest.Mock };
   let tagService: { findMultiTag: jest.Mock };
   let paginationService: { paginatedQuery: jest.Mock };
+  let cacheManager: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
 
   const mockAuthor = { id: 1, firstName: 'Jane', lastName: 'Doe' };
   const mockTags = [
@@ -90,17 +93,24 @@ describe('PostsService', () => {
         meta: { total: 1, page: 1, limit: 10 },
       })),
     };
+    cacheManager = {
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+    };
 
     service = new PostsService(
       postRepository as any,
       userService as any,
       tagService as any,
       paginationService as any,
+      cacheManager as any,
     );
   });
 
   describe('FindAllposts', () => {
     it('delegates to the pagination service and returns paginated results', async () => {
+      cacheManager.get.mockResolvedValue(undefined);
       const query = { limit: 10, page: 1 } as any;
       const result = await service.FindAllposts(query);
 
