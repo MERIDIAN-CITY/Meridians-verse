@@ -1,5 +1,4 @@
-import { Body, HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { GetPostsParamDto } from '../dto/post-param.dto';
+import { HttpException, HttpStatus, Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Post } from '../post.entity';
 import { Repository } from 'typeorm';
@@ -10,9 +9,13 @@ import { PatchPostDto } from '../dto/patch-post.dto';
 import { GetPostsDto } from '../dto/get-posts.dto';
 import { Pagination } from 'src/common/pagination/providers/pagination.provider';
 import { Paginated } from 'src/common/pagination/interfaces/paginated.interface';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class PostsService {
+  private postCacheKeys: Set<string> = new Set();
+
   constructor(
     @InjectRepository(Post) private postRepository: Repository<Post>,
 
@@ -21,19 +24,30 @@ export class PostsService {
     private readonly tagService: TagsService,
 
     private readonly paginationService: Pagination,
+
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   public async FindAllposts(postQuery: GetPostsDto): Promise<Paginated<Post>> {
-    {
-      const post = await this.paginationService.paginatedQuery(
-        {
-          limit: postQuery.limit,
-          page: postQuery.page,
-        },
-        this.postRepository,
-      );
-      return post;
+    const cacheKey = `posts_page_${postQuery.page}_limit_${postQuery.limit}`;
+    this.postCacheKeys.add(cacheKey);
+
+    const cachedPosts = await this.cacheManager.get<Paginated<Post>>(cacheKey);
+
+    if (cachedPosts) {
+      return cachedPosts;
     }
+
+    const post = await this.paginationService.paginatedQuery(
+      {
+        limit: postQuery.limit,
+        page: postQuery.page,
+      },
+      this.postRepository,
+    );
+
+    await this.cacheManager.set(cacheKey, post, 180);
+    return post;
   }
 
   /**
@@ -43,6 +57,8 @@ export class PostsService {
    */
   public async deleteOne(id: number) {
     await this.postRepository.softDelete(id);
+
+    await this.invalidatePostCache();
 
     return { deleted: true, id };
   }
@@ -84,7 +100,9 @@ export class PostsService {
     });
 
     // return the post to the user
-    return await this.postRepository.save(post);
+    const savedPost = await this.postRepository.save(post);
+    await this.invalidatePostCache();
+    return savedPost;
   }
 
   //TO EDIT A POST
@@ -110,6 +128,14 @@ export class PostsService {
     post.tags = tags;
 
     // save the post
-    return await this.postRepository.save(post);
+    const updatedPost = await this.postRepository.save(post);
+    await this.invalidatePostCache();
+    return updatedPost;
+  }
+
+  private async invalidatePostCache() {
+    const keys = Array.from(this.postCacheKeys);
+    await Promise.all(keys.map((key) => this.cacheManager.del(key)));
+    this.postCacheKeys.clear();
   }
 }

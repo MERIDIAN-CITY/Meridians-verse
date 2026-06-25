@@ -42,6 +42,7 @@ describe('UserService', () => {
     getAllUserWithBook: jest.Mock;
   };
   let createManyUserService: { manyUsers: jest.Mock };
+  let cacheManager: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
 
   const mockUser = {
     id: 1,
@@ -64,6 +65,11 @@ describe('UserService', () => {
       getAllUserWithBook: jest.fn(async () => [mockUser]),
     };
     createManyUserService = { manyUsers: jest.fn(async () => [mockUser]) };
+    cacheManager = {
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+    };
 
     service = new UserService(
       usersRepository as any,
@@ -71,6 +77,7 @@ describe('UserService', () => {
       findOneByemail as any,
       createUserWithBooks as any,
       createManyUserService as any,
+      cacheManager as any,
     );
   });
 

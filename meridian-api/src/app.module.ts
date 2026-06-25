@@ -26,6 +26,7 @@ import { TweetModule } from './tweets/tweet.module';
 import { UploadModule } from './upload/upload.module';
 import { HealthModule } from './health/health.module';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { CacheConfigModule } from './cache/cache.module';
 import { AuditModule } from './audit/audit.module';
 
 @Module({
@@ -93,6 +94,7 @@ import { AuditModule } from './audit/audit.module';
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync(jwtConfig.asProvider()),
 
+    CacheConfigModule,
     UsersModule,
     PostModule,
     TagModule,
