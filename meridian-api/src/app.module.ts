@@ -8,6 +8,7 @@ import { DataSource } from 'typeorm';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { envValidationSchema } from './config/env.validation';
 
 import { UsersModule } from './users/users.module';
 import { PostModule } from './post/post.module';
@@ -26,6 +27,7 @@ import { UploadModule } from './upload/upload.module';
 import { HealthModule } from './health/health.module';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { CacheConfigModule } from './cache/cache.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -37,6 +39,11 @@ import { CacheConfigModule } from './cache/cache.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
     }),
 
     /**
@@ -99,6 +106,7 @@ import { CacheConfigModule } from './cache/cache.module';
     UploadModule,
     HealthModule,
     PrometheusModule.register(),
+    AuditModule,
   ],
 
   controllers: [AppController],

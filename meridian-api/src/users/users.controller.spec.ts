@@ -161,7 +161,9 @@ describe('UsersController (integration)', () => {
     const response = await request(app.getHttpServer())
       .delete('/users/1')
       .expect(200);
+
     expect(response).toBeDefined();
+    expect(userService.deleteUser).toHaveBeenCalledWith(1);
   });
 
   it('PATCH /users updates user details', async () => {

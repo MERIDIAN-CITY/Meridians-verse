@@ -357,6 +357,7 @@
         pub token_id: TokenId,
         #[ink(topic)]
         pub seller: AccountId,
+        pub escrowed_amount: u128,
     }
 
     #[ink(event)]
