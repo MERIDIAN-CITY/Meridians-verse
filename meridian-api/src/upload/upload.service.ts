@@ -4,6 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { StorageProvider } from './storage-provider.interface';
+import sharp from 'sharp';
 
 /**
  * Magic-byte signatures for allowed file types.
@@ -28,6 +29,9 @@ export const ALLOWED_MIME_TYPES = Object.keys(MAGIC_BYTES);
 /** Maximum file size in bytes (5 MB). Also enforced at the controller layer. */
 export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+/** Maximum image dimensions to prevent decompression bombs (e.g., 8192x8192 pixels). */
+const MAX_IMAGE_DIMENSION = 8192;
+
 @Injectable()
 export class UploadService {
   constructor(
@@ -44,6 +48,7 @@ export class UploadService {
 
     this.validateMimeType(file);
     this.validateMagicBytes(file);
+    await this.validateImageDimensions(file);
 
     const url = await this.storageProvider.uploadFile(file);
     return { url, originalName: file.originalname };
@@ -56,8 +61,7 @@ export class UploadService {
   private validateMimeType(file: Express.Multer.File): void {
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
       throw new BadRequestException(
-        `File type "${file.mimetype}" is not allowed. ` +
-          `Accepted types: ${ALLOWED_MIME_TYPES.join(', ')}`,
+        `File type "${file.mimetype}" is not allowed. Accepted types: ${ALLOWED_MIME_TYPES.join(', ')}`,
       );
     }
   }
@@ -78,6 +82,30 @@ export class UploadService {
     if (!isValid) {
       throw new BadRequestException(
         'File content does not match its declared type (magic byte mismatch)',
+      );
+    }
+  }
+
+  private async validateImageDimensions(file: Express.Multer.File): Promise<void> {
+    if (!file.mimetype.startsWith('image/')) {
+      return;
+    }
+
+    try {
+      const metadata = await sharp(file.buffer).metadata();
+      if (metadata.width && metadata.height) {
+        if (metadata.width > MAX_IMAGE_DIMENSION || metadata.height > MAX_IMAGE_DIMENSION) {
+          throw new BadRequestException(
+            `Image dimensions (${metadata.width}x${metadata.height}) exceed maximum allowed (${MAX_IMAGE_DIMENSION}x${MAX_IMAGE_DIMENSION})`,
+          );
+        }
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Failed to process image, possibly corrupted or malicious',
       );
     }
   }

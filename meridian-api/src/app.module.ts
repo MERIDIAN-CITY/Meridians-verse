@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { CacheModule } from '@nestjs/cache-manager';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { DataSource } from 'typeorm';
@@ -21,6 +22,7 @@ import { PaginationModule } from './common/pagination/pagination.module';
 
 import jwtConfig from './auth/config/jwt.config';
 import { DataResponseInterceptor } from './common/interceptors/data-response.interceptor';
+import { IdempotencyInterceptor } from './common/interceptors/idempotency.interceptor';
 import { AccessTokenGuard } from './auth/guard/access-token/access-token.guard';
 import { MailProvider } from './mail/providers/mail.provider';
 import { TweetModule } from './tweets/tweet.module';
@@ -31,6 +33,10 @@ import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 3600, // 1 hour default
+    }),
     /**
      * GLOBAL ENV CONFIG
      * Local → .env
@@ -121,6 +127,10 @@ import { AuditModule } from './audit/audit.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: DataResponseInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: IdempotencyInterceptor,
     },
     {
       provide: APP_GUARD,

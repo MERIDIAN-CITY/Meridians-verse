@@ -36,6 +36,13 @@ export class RefreshTokenProvider {
     private readonly generateTokenProvider: GenerateTokenProvider,
   ) {}
 
+  private async revokeFamily(familyJti: string, userId: number) {
+    await this.refreshTokenRepository.update(
+      { familyJti, userId },
+      { revokedAt: new Date(), isRevoked: true },
+    );
+  }
+
   public async refreshToken(
     refreshTokendto: RefreshTokenDto,
     userAgent?: string,
@@ -50,10 +57,10 @@ export class RefreshTokenProvider {
         },
       );
 
-      const { sub, jti } = payload;
+      const { sub, jti, familyJti } = payload;
       const userId = Number(sub);
 
-      if (!Number.isFinite(userId)) {
+      if (!Number.isFinite(userId) || !familyJti) {
         throw new UnauthorizedException('Invalid refresh token payload');
       }
 
@@ -66,8 +73,11 @@ export class RefreshTokenProvider {
       if (
         !storedToken ||
         storedToken.revokedAt ||
+        storedToken.isRevoked ||
         storedToken.expiresAt <= new Date()
       ) {
+        // If we have a familyJti and the token is revoked or not found, revoke the entire family as a safety measure
+        await this.revokeFamily(familyJti, userId);
         throw new UnauthorizedException(
           'Refresh token has been revoked or expired',
         );
@@ -79,32 +89,29 @@ export class RefreshTokenProvider {
       );
 
       if (!isValid) {
+        await this.revokeFamily(familyJti, userId);
         throw new UnauthorizedException('Invalid refresh token');
       }
 
+      // Token is valid - first use, mark as revoked and generate new token
       await this.refreshTokenRepository.update(
         { jti, userId: user.id },
-        { revokedAt: new Date() },
+        { revokedAt: new Date(), isRevoked: true },
       );
 
-      const tokens = await this.generateTokenProvider.generateTokens(user);
-      const newRefreshToken = await this.refreshTokenRepository.save({
-        jti: tokens.jti,
-        userId: user.id,
-        tokenHash: await this.hashingProvider.hashPassword(
-          tokens.refresh_token,
-        ),
-        expiresAt: new Date(Date.now() + this.jwtconfiguration.Rttl * 1000),
-        revokedAt: null,
-        userAgent: userAgent ?? null,
-      });
+      const tokens = await this.generateTokenProvider.generateTokens(
+        user,
+        familyJti,
+      );
 
       return {
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
-        refreshTokenId: newRefreshToken.id,
       };
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException(
         error instanceof Error ? error.message : error,
       );
@@ -122,7 +129,7 @@ export class RefreshTokenProvider {
         },
       );
 
-      const { sub, jti } = payload;
+      const { sub, jti, familyJti } = payload;
       const userId = Number(sub);
 
       if (!Number.isFinite(userId)) {
@@ -133,7 +140,7 @@ export class RefreshTokenProvider {
 
       await this.refreshTokenRepository.update(
         { jti, userId: user.id },
-        { revokedAt: new Date() },
+        { revokedAt: new Date(), isRevoked: true },
       );
 
       return { message: 'Logged out successfully' };
@@ -147,7 +154,7 @@ export class RefreshTokenProvider {
   public async logoutAll(userId: number) {
     await this.refreshTokenRepository.update(
       { userId, revokedAt: null },
-      { revokedAt: new Date() },
+      { revokedAt: new Date(), isRevoked: true },
     );
 
     return { message: 'All sessions revoked successfully' };

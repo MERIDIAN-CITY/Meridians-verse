@@ -2,6 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { UploadService, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from './upload.service';
 import { StorageProvider } from './storage-provider.interface';
+import sharp from 'sharp';
+
+jest.mock('sharp', () =>
+  jest.fn().mockReturnValue({
+    metadata: jest.fn(),
+  }),
+);
 
 // Valid magic-byte headers for each allowed type
 const MAGIC: Record<string, Buffer> = {
@@ -26,11 +33,13 @@ function makeFile(
 describe('UploadService', () => {
   let service: UploadService;
   let storageProvider: jest.Mocked<StorageProvider>;
+  let sharpMock: jest.MockedFunction<typeof sharp>;
 
   beforeEach(async () => {
     storageProvider = {
       uploadFile: jest.fn().mockResolvedValue('/uploads/test.png'),
     };
+    sharpMock = sharp as jest.MockedFunction<typeof sharp>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -51,6 +60,9 @@ describe('UploadService', () => {
   it.each(ALLOWED_MIME_TYPES)(
     'accepts valid %s files and delegates to the storage provider',
     async (mime) => {
+      if (mime.startsWith('image/')) {
+        sharpMock().metadata.mockResolvedValue({ width: 100, height: 100 });
+      }
       const file = makeFile({ mimetype: mime, originalname: 'file' });
       storageProvider.uploadFile.mockResolvedValueOnce('/uploads/file');
 
@@ -59,6 +71,23 @@ describe('UploadService', () => {
       expect(result).toEqual({ url: '/uploads/file', originalName: 'file' });
     },
   );
+
+  // ── image dimension validation ─────────────────────────────────────────────
+
+  it('throws BadRequestException when image dimensions are too large', async () => {
+    sharpMock().metadata.mockResolvedValue({ width: 10000, height: 10000 });
+    const file = makeFile({ mimetype: 'image/png' });
+
+    await expect(service.uploadFile(file)).rejects.toThrow(BadRequestException);
+    await expect(service.uploadFile(file)).rejects.toThrow(/exceed maximum allowed/i);
+  });
+
+  it('throws BadRequestException when sharp fails to process image', async () => {
+    sharpMock().metadata.mockRejectedValue(new Error('invalid image'));
+    const file = makeFile({ mimetype: 'image/png' });
+
+    await expect(service.uploadFile(file)).rejects.toThrow(BadRequestException);
+  });
 
   // ── missing file ────────────────────────────────────────────────────────────
 
@@ -115,6 +144,7 @@ describe('UploadService', () => {
   });
 
   it('accepts GIF87a magic bytes for image/gif', async () => {
+    sharpMock().metadata.mockResolvedValue({ width: 100, height: 100 });
     const gif87aBuffer = Buffer.from([
       0x47, 0x49, 0x46, 0x38, 0x37, 0x61, 0x01, 0x00,
     ]);

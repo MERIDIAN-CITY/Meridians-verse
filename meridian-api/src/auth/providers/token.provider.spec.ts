@@ -72,13 +72,30 @@ describe('GenerateTokenProvider', () => {
           userId: 5,
           tokenHash: 'token-hash',
           revokedAt: null,
+          familyJti: expect.any(String),
+          isRevoked: false,
         }),
       );
       expect(result).toMatchObject({
         access_token: expect.stringContaining(':5'),
         refresh_token: expect.stringContaining(':5'),
         jti: expect.any(String),
+        familyJti: expect.any(String),
       });
+    });
+
+    it('uses existing familyJti when provided', async () => {
+      const user = { id: 5, email: 'a@b.com' } as any;
+      const existingFamilyJti = 'existing-family-jti';
+
+      const result = await provider.generateTokens(user, existingFamilyJti);
+
+      expect(refreshTokenRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          familyJti: existingFamilyJti,
+        }),
+      );
+      expect(result.familyJti).toBe(existingFamilyJti);
     });
   });
 });

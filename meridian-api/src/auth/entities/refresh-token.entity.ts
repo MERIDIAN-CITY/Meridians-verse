@@ -9,6 +9,9 @@ export class RefreshToken {
   jti: string;
 
   @Column()
+  familyJti: string;
+
+  @Column()
   userId: number;
 
   @Column()
@@ -22,4 +25,7 @@ export class RefreshToken {
 
   @Column({ nullable: true })
   userAgent: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  isRevoked: boolean;
 }

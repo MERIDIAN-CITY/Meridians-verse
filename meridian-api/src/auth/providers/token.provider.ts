@@ -45,26 +45,29 @@ export class GenerateTokenProvider {
     );
   }
 
-  public async generateTokens(user: User) {
+  public async generateTokens(user: User, existingFamilyJti?: string) {
     const jti = randomUUID();
+    const familyJti = existingFamilyJti || jti;
 
     const [access_token, refresh_token] = await Promise.all([
       // generate access token
       this.SignToken(user.id, this.jwtconfiguration.ttl, { email: user.email }),
 
       // generate refresh token
-      this.SignToken(user.id, this.jwtconfiguration.Rttl, { jti }),
+      this.SignToken(user.id, this.jwtconfiguration.Rttl, { jti, familyJti }),
     ]);
 
     await this.refreshTokenRepository.save({
       jti,
+      familyJti,
       userId: user.id,
       tokenHash: await this.hashingProvider.hashPassword(refresh_token),
       expiresAt: new Date(Date.now() + this.jwtconfiguration.Rttl * 1000),
       revokedAt: null,
       userAgent: null,
+      isRevoked: false,
     });
 
-    return { access_token, refresh_token, jti };
+    return { access_token, refresh_token, jti, familyJti };
   }
 }

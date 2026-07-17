@@ -45,12 +45,15 @@ describe('RefreshTokenProvider', () => {
   };
 
   const user = { id: 1, email: 'a@b.com' };
+  const familyJti = 'family-jti-1';
   const storedToken = {
     jti: 'jti-1',
+    familyJti,
     userId: user.id,
     tokenHash: 'hash',
     expiresAt: new Date(Date.now() + 60_000),
     revokedAt: null,
+    isRevoked: false,
   };
 
   beforeEach(() => {
@@ -59,6 +62,7 @@ describe('RefreshTokenProvider', () => {
       verifyAsync: jest.fn(async () => ({
         sub: user.id,
         jti: storedToken.jti,
+        familyJti,
       })),
     };
     refreshTokenRepository = {
@@ -77,6 +81,7 @@ describe('RefreshTokenProvider', () => {
         access_token: 'new-access',
         refresh_token: 'new-refresh',
         jti: 'new-jti',
+        familyJti,
       })),
     };
 
@@ -103,14 +108,28 @@ describe('RefreshTokenProvider', () => {
       expect(hashingProvider.comparePassword).toHaveBeenCalled();
       expect(refreshTokenRepository.update).toHaveBeenCalledWith(
         { jti: storedToken.jti, userId: user.id },
-        { revokedAt: expect.any(Date) },
+        { revokedAt: expect.any(Date), isRevoked: true },
       );
-      expect(refreshTokenRepository.save).toHaveBeenCalled();
+      expect(generateTokenProvider.generateTokens).toHaveBeenCalledWith(user, familyJti);
       expect(result).toEqual({
         access_token: 'new-access',
         refresh_token: 'new-refresh',
-        refreshTokenId: 'new-id',
       });
+    });
+
+    it('revokes entire family and throws when token is already revoked', async () => {
+      refreshTokenRepository.findOne.mockResolvedValueOnce({
+        ...storedToken,
+        isRevoked: true,
+      });
+
+      await expect(
+        provider.refreshToken({ refreshToken: 'valid' } as any),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(refreshTokenRepository.update).toHaveBeenCalledWith(
+        { familyJti, userId: user.id },
+        { revokedAt: expect.any(Date), isRevoked: true },
+      );
     });
 
     it('throws UnauthorizedException when the stored token is revoked', async () => {
@@ -135,12 +154,16 @@ describe('RefreshTokenProvider', () => {
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it('throws UnauthorizedException when the token hash does not match', async () => {
+    it('revokes entire family and throws when the token hash does not match', async () => {
       hashingProvider.comparePassword.mockResolvedValueOnce(false);
 
       await expect(
         provider.refreshToken({ refreshToken: 'valid' } as any),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(refreshTokenRepository.update).toHaveBeenCalledWith(
+        { familyJti, userId: user.id },
+        { revokedAt: expect.any(Date), isRevoked: true },
+      );
     });
 
     it('throws UnauthorizedException when verification fails', async () => {
@@ -155,6 +178,7 @@ describe('RefreshTokenProvider', () => {
       jwtService.verifyAsync.mockResolvedValueOnce({
         sub: 'not-a-number',
         jti: 'x',
+        familyJti,
       });
 
       await expect(
@@ -168,7 +192,7 @@ describe('RefreshTokenProvider', () => {
       const result = await provider.logout({ refreshToken: 'valid' } as any);
       expect(refreshTokenRepository.update).toHaveBeenCalledWith(
         { jti: storedToken.jti, userId: user.id },
-        { revokedAt: expect.any(Date) },
+        { revokedAt: expect.any(Date), isRevoked: true },
       );
       expect(result).toEqual({ message: 'Logged out successfully' });
     });
@@ -186,7 +210,7 @@ describe('RefreshTokenProvider', () => {
       const result = await provider.logoutAll(user.id);
       expect(refreshTokenRepository.update).toHaveBeenCalledWith(
         { userId: user.id, revokedAt: null },
-        { revokedAt: expect.any(Date) },
+        { revokedAt: expect.any(Date), isRevoked: true },
       );
       expect(result).toEqual({ message: 'All sessions revoked successfully' });
     });
