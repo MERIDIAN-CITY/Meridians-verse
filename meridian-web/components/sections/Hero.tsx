@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, DollarSign, Sparkles, Users } from 'lucide-react';
 import { CardMetric, CardMetrics } from '@/components/ui/metric-card';
-import { ArrowRight } from 'lucide-react';
+import { sectionReveal } from '@/lib/animations/variants';
 
 export function Hero() {
   return (
@@ -69,9 +69,11 @@ export function Hero() {
 
         {/* Feature highlights */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          role="presentation"
+          aria-hidden="true"
+          variants={sectionReveal}
+          initial="hidden"
+          animate="visible"
           className="mt-16 pt-12 border-t border-border"
         >
           <CardMetrics>

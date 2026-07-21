@@ -2,13 +2,25 @@
 
 import { motion } from 'framer-motion';
 import { Award } from 'lucide-react';
-import { containerVariants, itemVariantsLeft } from '@/lib/animations/variants';
+import { cardReveal, containerVariants, itemVariantsLeft, sectionViewport } from '@/lib/animations/variants';
 
 interface LeaderboardEntry {
   rank: number;
   name: string;
   xp: number;
   yield: string;
+  proof?: { leaf: string; proof: string[]; root: string; verified: boolean; leafIndex: number } | null;
+}
+
+function verifyProof(leaf: string, proof: string[], root: string): boolean {
+  if (!leaf || !root) return false;
+
+  let current = leaf;
+  for (const sibling of proof) {
+    current = `${current}:${sibling}`;
+  }
+
+  return current === root;
 }
 
 const leaderboard: LeaderboardEntry[] = [
@@ -22,12 +34,15 @@ const leaderboard: LeaderboardEntry[] = [
 export function LeaderboardCard() {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.6 }}
-      viewport={{ once: true }}
+      role="presentation"
+      aria-hidden="true"
+      variants={cardReveal}
+      initial="hidden"
+      whileInView="visible"
+      viewport={sectionViewport}
       className="bg-card border border-border rounded-2xl p-8"
     >
+      <div className="sr-only">Weekly Leaderboard</div>
       <h3 className="font-semibold text-foreground mb-6 flex items-center gap-2">
         <Award size={20} className="text-primary" />
         Weekly Leaderboard
@@ -37,10 +52,12 @@ export function LeaderboardCard() {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={sectionViewport}
         className="space-y-3"
       >
-        {leaderboard.map((entry) => (
+        {leaderboard.map((entry) => {
+          const isVerified = entry.proof ? verifyProof(entry.proof.leaf, entry.proof.proof, entry.proof.root) : false;
+          return (
           <motion.div
             key={entry.rank}
             variants={itemVariantsLeft}
@@ -59,10 +76,11 @@ export function LeaderboardCard() {
             </div>
             <div className="text-right">
               <p className="font-semibold text-primary">{entry.yield}</p>
-              <p className="text-xs text-muted-foreground">This week</p>
+              <p className="text-xs text-muted-foreground">{isVerified ? 'Verified proof' : 'Missing proof'}</p>
             </div>
           </motion.div>
-        ))}
+          );
+        })}
       </motion.div>
 
       <button className="w-full mt-6 px-4 py-3 rounded-lg border border-primary text-primary font-semibold hover:bg-primary/5 transition-colors">

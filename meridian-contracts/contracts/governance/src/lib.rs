@@ -1,7 +1,7 @@
 #![no_std]
 
 use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, String, Vec, Symbol};
-use stellar_insured_lib::{Proposal, GovernanceAction};
+use stellar_insured_lib::{Proposal, GovernanceAction, GovernanceError};
 
 #[contracttype]
 #[derive(Clone)]
@@ -75,9 +75,9 @@ impl GovernanceContract {
         claims_contract: Address,
         risk_pool_contract: Address,
         policy_contract: Address,
-    ) {
+    ) -> Result<(), GovernanceError> {
         if env.storage().instance().has(&DataKey::Admin) {
-            panic!("Already initialized");
+            return Err(GovernanceError::AlreadyInitialized);
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Token, &token);
@@ -93,6 +93,7 @@ impl GovernanceContract {
             (symbol_short!("admin"), symbol_short!("init")),
             admin,
         );
+        Ok(())
     }
 
     pub fn create_proposal(
@@ -102,7 +103,7 @@ impl GovernanceContract {
         description: String,
         execution_data: String,
         threshold_percentage: u32,
-    ) -> u64 {
+    ) -> Result<u64, GovernanceError> {
         creator.require_auth();
 
         let mut counter = get_proposal_counter(&env);
@@ -110,7 +111,7 @@ impl GovernanceContract {
         env.storage().instance().set(&DataKey::ProposalCounter, &counter);
 
         let voting_period: u64 = env.storage().instance().get(&DataKey::VotingPeriod)
-            .unwrap_or_else(|| panic!("Contract not initialized"));
+            .ok_or(GovernanceError::NotInitialized)?;
         
         let proposal = Proposal {
             id: counter,
@@ -133,7 +134,7 @@ impl GovernanceContract {
             (counter, creator),
         );
 
-        counter
+        Ok(counter)
     }
 
     pub fn create_slashing_proposal(
@@ -144,7 +145,7 @@ impl GovernanceContract {
         reason: String,
         amount: i128,
         threshold: u32,
-    ) -> u64 {
+    ) -> Result<u64, GovernanceError> {
         creator.require_auth();
 
         let title = String::from_str(&env, "Slashing Proposal");
@@ -175,7 +176,7 @@ impl GovernanceContract {
             (counter, target, role, amount),
         );
 
-        counter
+        Ok(counter)
     }
 
     // #411: Create governance proposal for claim approval
@@ -184,7 +185,7 @@ impl GovernanceContract {
         creator: Address,
         claim_id: u64,
         threshold: u32,
-    ) -> u64 {
+    ) -> Result<u64, GovernanceError> {
         creator.require_auth();
 
         let title = String::from_str(&env, "Claim Approval Proposal");
@@ -196,7 +197,7 @@ impl GovernanceContract {
         env.storage().instance().set(&DataKey::ProposalCounter, &counter);
 
         let voting_period: u64 = env.storage().instance().get(&DataKey::VotingPeriod)
-            .unwrap_or_else(|| panic!("Contract not initialized"));
+            .ok_or(GovernanceError::NotInitialized)?;
 
         let proposal = Proposal {
             id: counter,
@@ -223,7 +224,7 @@ impl GovernanceContract {
             (counter, claim_id, creator),
         );
 
-        counter
+        Ok(counter)
     }
 
     // #411: Create governance proposal for fund allocation
@@ -233,7 +234,7 @@ impl GovernanceContract {
         recipient: Address,
         amount: i128,
         threshold: u32,
-    ) -> u64 {
+    ) -> Result<u64, GovernanceError> {
         creator.require_auth();
 
         let title = String::from_str(&env, "Fund Allocation Proposal");
@@ -245,7 +246,7 @@ impl GovernanceContract {
         env.storage().instance().set(&DataKey::ProposalCounter, &counter);
 
         let voting_period: u64 = env.storage().instance().get(&DataKey::VotingPeriod)
-            .unwrap_or_else(|| panic!("Contract not initialized"));
+            .ok_or(GovernanceError::NotInitialized)?;
 
         let proposal = Proposal {
             id: counter,
@@ -272,21 +273,21 @@ impl GovernanceContract {
             (counter, recipient, amount, creator),
         );
 
-        counter
+        Ok(counter)
     }
 
-    pub fn vote(env: Env, voter: Address, proposal_id: u64, weight: i128, is_yes: bool) {
+    pub fn vote(env: Env, voter: Address, proposal_id: u64, weight: i128, is_yes: bool) -> Result<(), GovernanceError> {
         voter.require_auth();
 
         let mut proposal = get_proposal_inner(&env, proposal_id);
 
         if env.ledger().timestamp() > proposal.expires_at {
-            panic!("Voting period ended");
+            return Err(GovernanceError::VotingPeriodEnded);
         }
 
         let record_key = DataKey::VoterRecord(proposal_id, voter.clone());
         if env.storage().persistent().has(&record_key) {
-            panic!("Already voted");
+            return Err(GovernanceError::AlreadyVoted);
         }
 
         if is_yes {
@@ -309,13 +310,14 @@ impl GovernanceContract {
             (symbol_short!("gov"), symbol_short!("vote")),
             (proposal_id, voter),
         );
+        Ok(())
     }
 
-    pub fn finalize_proposal(env: Env, proposal_id: u64) {
+    pub fn finalize_proposal(env: Env, proposal_id: u64) -> Result<(), GovernanceError> {
         let mut proposal = get_proposal_inner(&env, proposal_id);
 
         if env.ledger().timestamp() <= proposal.expires_at {
-            panic!("Voting period not yet ended");
+            return Err(GovernanceError::VotingPeriodNotEnded);
         }
 
         proposal.is_finalized = true;
@@ -325,22 +327,23 @@ impl GovernanceContract {
             (symbol_short!("gov"), symbol_short!("final")),
             proposal_id,
         );
+        Ok(())
     }
 
-    pub fn execute_proposal(env: Env, proposal_id: u64) {
+    pub fn execute_proposal(env: Env, proposal_id: u64) -> Result<(), GovernanceError> {
         let mut proposal = get_proposal_inner(&env, proposal_id);
 
         if !proposal.is_finalized {
-            panic!("Proposal must be finalized first");
+            return Err(GovernanceError::MustFinalizeFirst);
         }
 
         if proposal.is_executed {
-            panic!("Already executed");
+            return Err(GovernanceError::AlreadyExecuted);
         }
 
         let total_votes = proposal.yes_votes + proposal.no_votes;
         if total_votes == 0 || (proposal.yes_votes * 100 / total_votes) < proposal.threshold_percentage as i128 {
-            panic!("Threshold not met");
+            return Err(GovernanceError::ThresholdNotMet);
         }
 
         // #411: Execute governance action if exists
@@ -352,7 +355,7 @@ impl GovernanceContract {
                 GovernanceAction::ClaimApproval(claim_id) => {
                     // Call claims contract to approve the claim
                     let claims_contract: Address = env.storage().instance().get(&DataKey::ClaimsContract)
-                        .unwrap_or_else(|| panic!("Claims contract not set"));
+                        .ok_or(GovernanceError::ClaimsContractNotSet)?;
                     env.invoke_contract::<()>(
                         &claims_contract,
                         &symbol_short!("approve"),
@@ -362,7 +365,7 @@ impl GovernanceContract {
                 GovernanceAction::FundAllocation(recipient, amount) => {
                     // Call risk pool to allocate funds
                     let risk_pool: Address = env.storage().instance().get(&DataKey::RiskPoolContract)
-                        .unwrap_or_else(|| panic!("Risk pool contract not set"));
+                        .ok_or(GovernanceError::RiskPoolContractNotSet)?;
                     env.invoke_contract::<()>(
                         &risk_pool,
                         &symbol_short!("payout"),
@@ -372,7 +375,7 @@ impl GovernanceContract {
                 GovernanceAction::PolicyChange(policy_id) => {
                     // Handle policy change through policy contract
                     let policy_contract: Address = env.storage().instance().get(&DataKey::PolicyContract)
-                        .unwrap_or_else(|| panic!("Policy contract not set"));
+                        .ok_or(GovernanceError::PolicyContractNotSet)?;
                     env.invoke_contract::<()>(
                         &policy_contract,
                         &symbol_short!("update"),
@@ -394,10 +397,11 @@ impl GovernanceContract {
             (symbol_short!("admin"), symbol_short!("exec")),
             (proposal_id, proposal.creator),
         );
+        Ok(())
     }
 
-    pub fn execute_slashing_proposal(env: Env, proposal_id: u64) {
-        Self::execute_proposal(env, proposal_id);
+    pub fn execute_slashing_proposal(env: Env, proposal_id: u64) -> Result<(), GovernanceError> {
+        Self::execute_proposal(env, proposal_id)
     }
 }
 

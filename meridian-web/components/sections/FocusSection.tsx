@@ -14,29 +14,39 @@ import {
   SuperchargeTiersLazy,
 } from '@/components/sections/LazySections';
 import { SectionSkeleton } from '@/components/sections/SectionSkeleton';
+import { FocusProvider } from '@/context/FocusContext';
 
 export function FocusSection() {
   return (
-    <section id="focus" className="py-20 px-4 max-w-7xl mx-auto">
-      {/* Heading — SSR, zero JS, fast first paint */}
-      <div className="text-center mb-16">
-        <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">Focus Pillar</h2>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Nurture your productivity companion while earning rewards for staying focused.
-        </p>
-      </div>
+    <FocusProvider>
+      <section 
+        id="focus" 
+        className="py-20 px-4 max-w-7xl mx-auto"
+        style={{
+          contentVisibility: 'auto',
+          containIntrinsicSize: '0 800px',
+        }}
+      >
+        {/* Heading — SSR, zero JS, fast first paint */}
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">Focus Pillar</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Nurture your productivity companion while earning rewards for staying focused.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        {/* Left col — pet, timer, streaks — deferred via Suspense */}
-        <Suspense fallback={<SectionSkeleton variant="default" />}>
-          <FocusInteractiveLazy />
-        </Suspense>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left col — pet, timer, streaks — deferred via Suspense */}
+          <Suspense fallback={<SectionSkeleton variant="default" />}>
+            <FocusInteractiveLazy />
+          </Suspense>
 
-        {/* Right col — supercharge tiers — deferred via Suspense */}
-        <Suspense fallback={<SectionSkeleton variant="default" />}>
-          <SuperchargeTiersLazy />
-        </Suspense>
-      </div>
-    </section>
+          {/* Right col — supercharge tiers — deferred via Suspense */}
+          <Suspense fallback={<SectionSkeleton variant="default" />}>
+            <SuperchargeTiersLazy />
+          </Suspense>
+        </div>
+      </section>
+    </FocusProvider>
   );
 }

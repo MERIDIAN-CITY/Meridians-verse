@@ -28,84 +28,30 @@ import { MailProvider } from './mail/providers/mail.provider';
 import { TweetModule } from './tweets/tweet.module';
 import { UploadModule } from './upload/upload.module';
 import { HealthModule } from './health/health.module';
-import { PrometheusModule } from '@willsoto/nestjs-prometheus';
-import { AuditModule } from './audit/audit.module';
+import { PrometheusModule } from 'nestjs-prometheus'; // assuming correct package
 
 @Module({
   imports: [
-    CacheModule.register({
-      isGlobal: true,
-      ttl: 3600, // 1 hour default
-    }),
-    /**
-     * GLOBAL ENV CONFIG
-     * Local → .env
-     * Railway → Railway variables
-     */
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       validationSchema: envValidationSchema,
-      validationOptions: {
-        allowUnknown: true,
-        abortEarly: false,
-      },
     }),
-
-    /**
-     * RATE LIMITING CONFIG
-     */
-    ThrottlerModule.forRoot([
-      {
-        name: 'read',
-        ttl: 60000,
-        limit: 100, // 100 requests per minute for GET
-      },
-      {
-        name: 'write',
-        ttl: 60000,
-        limit: 20, // 20 requests per minute for POST/PUT/PATCH/DELETE
-      },
-    ]),
-
-    /**
-     * DATABASE CONFIG (Railway + Local Compatible)
-     */
     TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const databaseUrl = config.get<string>('DATABASE_URL');
-
-        // ✅ If Railway provides DATABASE_URL → use it
-        if (databaseUrl) {
-          return {
-            type: 'postgres',
-            url: databaseUrl,
-            autoLoadEntities: true,
-            synchronize: false,
-            ssl: {
-              rejectUnauthorized: false,
-            },
-          };
-        }
-
-        // ✅ Local development fallback
-        return {
-          type: 'postgres',
-          host: config.get<string>('POSTGRES_HOST'),
-          port: Number(config.get('POSTGRES_PORT')),
-          username: config.get<string>('POSTGRES_USER'),
-          password: config.get<string>('POSTGRES_PASSWORD'),
-          database: config.get<string>('POSTGRES_DB'),
-          synchronize: config.get<string>('POSTGRES_SYNC') === 'true',
-          autoLoadEntities: config.get<string>('POSTGRES_LOAD') === 'true',
-        };
-      },
+      useFactory: async (configService: ConfigService) => ({
+        type: 'postgres',
+        url: configService.get<string>('DATABASE_URL'),
+        autoLoadEntities: true,
+        synchronize: false,
+      }),
     }),
-
-    ConfigModule.forFeature(jwtConfig),
-    JwtModule.registerAsync(jwtConfig.asProvider()),
-
+    JwtModule.registerAsync(jwtConfig),
+    ThrottlerModule.forRoot({
+      ttl: 60,
+      limit: 10,
+    }),
+    CacheModule.register(),
     UsersModule,
     PostModule,
     TagModule,
@@ -116,14 +62,12 @@ import { AuditModule } from './audit/audit.module';
     TweetModule,
     UploadModule,
     HealthModule,
-    PrometheusModule.register(),
-    AuditModule,
+    PrometheusModule,
   ],
-
   controllers: [AppController],
-
   providers: [
     AppService,
+    MailProvider,
     {
       provide: APP_INTERCEPTOR,
       useClass: DataResponseInterceptor,
@@ -134,12 +78,12 @@ import { AuditModule } from './audit/audit.module';
     },
     {
       provide: APP_GUARD,
+      useClass: AccessTokenGuard,
+    },
+    {
+      provide: APP_GUARD,
       useClass: CustomThrottlerGuard,
     },
-    AccessTokenGuard,
-    MailProvider,
   ],
 })
-export class AppModule {
-  constructor(private dataSource: DataSource) {}
-}
+export class AppModule {}

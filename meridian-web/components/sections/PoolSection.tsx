@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { containerVariants } from '@/lib/animations/variants';
+import { containerVariants, sectionReveal, sectionViewport } from '@/lib/animations/variants';
 import { LeaderboardCard } from './pool/LeaderboardCard';
 import { PoolFeatureGrid } from './pool/PoolFeatureGrid';
 import { PoolStats } from './pool/PoolStats';
@@ -11,10 +11,12 @@ export function PoolSection() {
     <section id="pool" className="py-20 px-4 max-w-7xl mx-auto">
       {/* Section heading */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        viewport={{ once: true }}
+        role="presentation"
+        aria-hidden="true"
+        variants={sectionReveal}
+        initial="hidden"
+        whileInView="visible"
+        viewport={sectionViewport}
         className="text-center mb-16"
       >
         <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">Pool Pillar</h2>
@@ -30,10 +32,12 @@ export function PoolSection() {
 
         {/* Right — features + stats */}
         <motion.div
+          role="presentation"
+          aria-hidden="true"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
+          viewport={sectionViewport}
           className="space-y-6"
         >
           <h3 className="text-2xl font-bold text-foreground">No-Loss Yield</h3>
