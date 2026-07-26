@@ -13,6 +13,7 @@ export class TagsService {
     private readonly paginationService: Pagination,
   ) {}
 
+  // FIX: Changed parameter type from number[] to string[]
   public async findMultiTag(tags: string[]) {
     const result = this.tagRepository.find({
       where: { id: In(tags) },
@@ -26,6 +27,7 @@ export class TagsService {
     const tags = await this.paginationService.paginatedCursorQuery(
       {
         limit: getTagsDto.limit,
+        // FIX: Convert cursor to number or undefined
         cursor: getTagsDto.cursor ? parseInt(getTagsDto.cursor) : undefined,
         startDate: getTagsDto.startDate,
         endDate: getTagsDto.endDate,
@@ -33,7 +35,12 @@ export class TagsService {
       this.tagRepository,
       ['post'],
     );
-    return tags;
+    // FIX: Convert nextCursor to string if it's a number
+    return {
+      data: tags.data,
+      nextCursor: tags.nextCursor ? String(tags.nextCursor) : null,
+      total: tags.total,
+    };
   }
 
   public async createTag(createTagDto: CreateTagDto) {

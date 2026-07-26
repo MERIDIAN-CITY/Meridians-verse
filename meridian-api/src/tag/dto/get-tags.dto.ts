@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsInt, Min, IsDateString } from 'class-validator';
+import { IsOptional, IsInt, Min, IsDateString, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetTagsDto {
@@ -15,10 +15,11 @@ export class GetTagsDto {
   limit?: number = 10;
 
   @ApiPropertyOptional({
-    description: 'Cursor for pagination (tag ID)',
+    description: 'Cursor for pagination (tag ID as string)',
     example: 'abc-123',
   })
   @IsOptional()
+  @IsString()
   cursor?: string;
 
   @ApiPropertyOptional({

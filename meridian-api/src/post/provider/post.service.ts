@@ -41,21 +41,12 @@ export class PostsService {
     return posts;
   }
 
-  /**
-   * Soft-deletes a post (issue #427).
-   * TypeORM automatically excludes rows with a non-null `deletedAt` from
-   * subsequent `find*` calls. Use `restorePost` to undo this operation.
-   */
   public async deleteOne(id: number) {
     await this.postRepository.softDelete(id);
 
     return { deleted: true, id };
   }
 
-  /**
-   * Restores a soft-deleted post, clearing its `deletedAt` value so it
-   * reappears in regular queries.
-   */
   public async restorePost(id: number) {
     const result = await this.postRepository.restore(id);
 
@@ -72,18 +63,16 @@ export class PostsService {
     return { restored: true, id };
   }
 
-  /**
-   * Creates a post inside a transaction so that the post row, the MetaOption
-   * cascade, and the post-tags join-table rows are all written atomically.
-   * Any failure rolls back the entire operation preventing partial writes.
-   */
   public async createPost(createpostDto: CreatePostDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
       const author = await this.userService.findOneId(createpostDto.authorId);
-      const tags = await this.tagService.findMultiTag(createpostDto.tags);
+      // FIX: Convert number[] to string[] if tags are numbers
+      const tags = await this.tagService.findMultiTag(
+        createpostDto.tags.map(String)
+      );
       const post = queryRunner.manager.create(Post, {
         ...createpostDto,
         author,
@@ -104,16 +93,15 @@ export class PostsService {
     }
   }
 
-  /**
-   * Updates a post inside a transaction so that the post update and the
-   * tag join-table changes are applied atomically.
-   */
   public async UpdatePost(patchPostDto: PatchPostDto) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const tags = await this.tagService.findMultiTag(patchPostDto.tags);
+      // FIX: Convert number[] to string[] if tags are numbers
+      const tags = await this.tagService.findMultiTag(
+        patchPostDto.tags.map(String)
+      );
       const post = await queryRunner.manager.findOneBy(Post, {
         id: patchPostDto.id,
       });
