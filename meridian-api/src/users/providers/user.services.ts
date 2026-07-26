@@ -3,56 +3,55 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
-import { GetPostsParamDto } from 'src/post/dto/post-param.dto';
+import { GetUsersDto } from '../dto/get-users.dto';
 import { EditUserDto } from '../dto/patch-user.dto';
 import { CreateUserProvider } from './create-user.provider';
 import { FindOneByEmail } from './find-one-by-email';
 import { CreateManyUser } from './createManyUser.Provider';
 import { CreateManyUsersDto } from '../dto/create-many-users.dto';
 import { CreateUserBookProvider } from './createUserWithBook';
+import { Pagination } from 'src/common/pagination/providers/pagination.provider';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User) private usersRepository: Repository<User>,
 
-    //dependecy injection for createUser Provider
     private readonly createuserprovider: CreateUserProvider,
 
-    //dependecy injection for findoneByemail Provider
     private readonly findOneByemail: FindOneByEmail,
 
     private readonly createUserWithBooks: CreateUserBookProvider,
 
-    // depedency injection of createManyUsers
     private readonly createManyUserService: CreateManyUser,
+
+    private readonly paginationService: Pagination,
   ) {}
-  // repository pattern that help commiunicate with the Database
-  // just by doing this we have injected a repository pattern
 
-  public findAll(
-    getUserParamDto: GetPostsParamDto,
-    limit: number,
-    page: number,
-  ): Promise<User[]> {
-    return this.usersRepository.find();
+  public async findAll(
+    getUsersDto: GetUsersDto,
+  ): Promise<{ data: User[]; nextCursor: number | null; total: number }> {
+    const users = await this.paginationService.paginatedCursorQuery(
+      {
+        limit: getUsersDto.limit,
+        cursor: getUsersDto.cursor,
+        startDate: getUsersDto.startDate,
+        endDate: getUsersDto.endDate,
+      },
+      this.usersRepository,
+      ['posts', 'metaoptions'],
+    );
+    return users;
   }
-
-  // inject Hasingprovider
 
   public async createUsers(createUserDto: CreateUserDto) {
     return this.createuserprovider.createUsers(createUserDto);
   }
 
   public async GetOneByEmail(email: string) {
-    //fineoneby email first one is provider second a method in the provider
     return await this.findOneByemail.findOneByEmail(email);
   }
 
-  /**
-   * Soft-deletes a user (issue #427). TypeORM will hide the row from
-   * subsequent `find*` queries; use `restoreUser` to undo.
-   */
   public async deleteUser(id: number) {
     const user = await this.usersRepository.findOneBy({ id });
     if (!user) {
@@ -70,9 +69,6 @@ export class UserService {
     return { deleted: true, id };
   }
 
-  /**
-   * Restores a soft-deleted user, clearing its `deletedAt` value.
-   */
   public async restoreUser(id: number) {
     const result = await this.usersRepository.restore(id);
 
@@ -89,7 +85,6 @@ export class UserService {
     return { restored: true, id };
   }
 
-  //finding users by id and userservice was exported in postmodule i.e export:[typeorm,userservice]
   public async findOneId(id: number): Promise<User | null> {
     const user = await this.usersRepository.findOneBy({ id });
 
@@ -110,7 +105,6 @@ export class UserService {
     return user;
   }
 
-  // editing user
   public async editUser(edituserDto: EditUserDto) {
     const edit = await this.usersRepository.findOneBy({
       id: edituserDto.id,
@@ -128,7 +122,6 @@ export class UserService {
     return await this.createManyUserService.manyUsers(createManyUserDto);
   }
 
-  //PRACTCE FOR ONE TO ONE RELATIONSHIP BTW USER AND BOOK ENTITY
   public async createUserWithBook(userDto: CreateUserDto) {
     return await this.createUserWithBooks.createUserwithBook(userDto);
   }

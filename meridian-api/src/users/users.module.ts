@@ -11,11 +11,13 @@ import { CreateUserBookProvider } from './providers/createUserWithBook';
 import { Tweet } from 'src/tweets/entities/tweet.entity';
 import { TweetModule } from 'src/tweets/tweet.module';
 import { UserAuthFacade } from './providers/user-auth.facade';
+import { PaginationModule } from 'src/common/pagination/pagination.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Tweet]),
     forwardRef(() => AuthModule),
+    PaginationModule,
   ],
   controllers: [UsersController],
   providers: [

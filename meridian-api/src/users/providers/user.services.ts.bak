@@ -1,0 +1,139 @@
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../user.entity';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { GetUsersDto } from '../dto/get-users.dto'; // NEW import
+import { EditUserDto } from '../dto/patch-user.dto';
+import { CreateUserProvider } from './create-user.provider';
+import { FindOneByEmail } from './find-one-by-email';
+import { CreateManyUser } from './createManyUser.Provider';
+import { CreateManyUsersDto } from '../dto/create-many-users.dto';
+import { CreateUserBookProvider } from './createUserWithBook';
+import { Pagination } from 'src/common/pagination/providers/pagination.provider'; // NEW import
+
+@Injectable()
+export class UserService {
+  constructor(
+    @InjectRepository(User) private usersRepository: Repository<User>,
+
+    private readonly createuserprovider: CreateUserProvider,
+
+    private readonly findOneByemail: FindOneByEmail,
+
+    private readonly createUserWithBooks: CreateUserBookProvider,
+
+    private readonly createManyUserService: CreateManyUser,
+
+    // NEW: Inject pagination service
+    private readonly paginationService: Pagination,
+  ) {}
+
+  // MODIFIED: Use cursor pagination
+  public async findAll(
+    getUsersDto: GetUsersDto,
+  ): Promise<{ data: User[]; nextCursor: number | null; total: number }> {
+    const users = await this.paginationService.paginatedCursorQuery(
+      {
+        limit: getUsersDto.limit,
+        cursor: getUsersDto.cursor,
+        startDate: getUsersDto.startDate,
+        endDate: getUsersDto.endDate,
+      },
+      this.usersRepository,
+      ['posts', 'metaoptions'], // Eager load relations to prevent N+1
+    );
+    return users;
+  }
+
+  // Rest of the methods remain the same...
+  public async createUsers(createUserDto: CreateUserDto) {
+    return this.createuserprovider.createUsers(createUserDto);
+  }
+
+  public async GetOneByEmail(email: string) {
+    return await this.findOneByemail.findOneByEmail(email);
+  }
+
+  public async deleteUser(id: number) {
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: `User with id ${id} not found`,
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    await this.usersRepository.softDelete(id);
+
+    return { deleted: true, id };
+  }
+
+  public async restoreUser(id: number) {
+    const result = await this.usersRepository.restore(id);
+
+    if (!result.affected) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: `User with id ${id} was not found or is not soft-deleted`,
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return { restored: true, id };
+  }
+
+  public async findOneId(id: number): Promise<User | null> {
+    const user = await this.usersRepository.findOneBy({ id });
+
+    if (!user) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          error: `User with id ${id} not found`,
+          table: 'User',
+        },
+        HttpStatus.NOT_FOUND,
+        {
+          description: `User with the given id ${id} was not found`,
+        },
+      );
+    }
+
+    return user;
+  }
+
+  public async editUser(edituserDto: EditUserDto) {
+    const edit = await this.usersRepository.findOneBy({
+      id: edituserDto.id,
+    });
+
+    edit.firstName = edituserDto.firstName ?? edit.firstName;
+    edit.lastName = edituserDto.lastName ?? edit.lastName;
+    edit.password = edituserDto.password ?? edit.password;
+    edit.email = edituserDto.email ?? edit.email;
+
+    return this.usersRepository.save(edit);
+  }
+
+  public async createMany(createManyUserDto: CreateManyUsersDto) {
+    return await this.createManyUserService.manyUsers(createManyUserDto);
+  }
+
+  public async createUserWithBook(userDto: CreateUserDto) {
+    return await this.createUserWithBooks.createUserwithBook(userDto);
+  }
+
+  public async getAllUserWithBook() {
+    return await this.createUserWithBooks.getAllUserWithBook();
+  }
+
+  public async findOneById(id: number) {
+    return await this.usersRepository.findOneBy({ id });
+  }
+}

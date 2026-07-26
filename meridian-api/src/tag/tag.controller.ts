@@ -1,13 +1,55 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Param,
+  Patch,
+  ParseIntPipe,
+  Query,
+} from '@nestjs/common';
 import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/create-tag.dto';
+import { GetTagsDto } from './dto/get-tags.dto';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('Tags')
 @Controller('tag')
 export class TagController {
   constructor(private readonly tagService: TagsService) {}
 
+  @Get()
+  @ApiOperation({ summary: 'Fetch all tags with cursor pagination' })
+  @ApiResponse({ status: 200, description: 'Tags retrieved successfully' })
+  public getTags(@Query() getTagsDto: GetTagsDto) {
+    return this.tagService.findAll(getTagsDto);
+  }
+
   @Post()
-  public createTag(@Body() CreateTagDto: CreateTagDto) {
-    return this.tagService.createTag(CreateTagDto);
+  @ApiOperation({ summary: 'Create a new tag (normalized and deduped)' })
+  @ApiResponse({ status: 201, description: 'Tag created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  public createTag(@Body() createTagDto: CreateTagDto) {
+    return this.tagService.createTag(createTagDto);
+  }
+
+  @Delete('/:id')
+  @ApiOperation({ summary: 'Soft-delete a tag by ID' })
+  @ApiResponse({ status: 200, description: 'Tag soft-deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Tag not found' })
+  public deleteTag(@Param('id') id: string) {
+    return this.tagService.deleteTag(id);
+  }
+
+  @Patch('/:id/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted tag by ID' })
+  @ApiResponse({ status: 200, description: 'Tag restored successfully' })
+  @ApiResponse({
+    status: 404,
+    description: 'Tag not found or not soft-deleted',
+  })
+  public restoreTag(@Param('id') id: string) {
+    return this.tagService.restoreTag(id);
   }
 }
