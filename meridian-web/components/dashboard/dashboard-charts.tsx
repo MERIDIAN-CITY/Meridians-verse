@@ -75,7 +75,7 @@ export function DashboardCharts({ initialData }: DashboardChartsProps) {
 
   return (
     <div
-      className="grid gap-4 md:grid-cols-2 lg:grid-cols-7"
+      className="grid grid-cols-1 gap-4 lg:grid-cols-7"
       role="region"
       aria-label="Dashboard charts"
     >

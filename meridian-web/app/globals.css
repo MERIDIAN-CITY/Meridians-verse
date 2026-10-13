@@ -145,12 +145,23 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
   }
 }
 
 @layer utilities {
+  /* Touch target accessibility utility */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
   /* Smooth scroll behavior */
   html {
     scroll-behavior: smooth;

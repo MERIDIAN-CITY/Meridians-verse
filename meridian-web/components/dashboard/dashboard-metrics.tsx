@@ -61,7 +61,7 @@ export function DashboardMetrics({ initialData }: DashboardMetricsProps) {
 
       {/* Metrics Grid */}
       <div 
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
         role="region"
         aria-label="Dashboard metrics"
         aria-live="polite"
