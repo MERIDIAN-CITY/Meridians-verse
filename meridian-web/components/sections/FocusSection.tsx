@@ -28,14 +28,14 @@ export function FocusSection() {
         }}
       >
         {/* Heading — SSR, zero JS, fast first paint */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">Focus Pillar</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+        <div className="text-center mb-10 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-3 sm:mb-4">Focus Pillar</h2>
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-2">
             Nurture your productivity companion while earning rewards for staying focused.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Left col — pet, timer, streaks — deferred via Suspense */}
           <Suspense fallback={<SectionSkeleton variant="default" />}>
             <FocusInteractiveLazy />
