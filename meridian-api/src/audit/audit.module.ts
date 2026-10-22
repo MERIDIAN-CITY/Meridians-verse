@@ -4,6 +4,8 @@ import { AuditLog } from './audit-log.entity';
 import { AuditService } from './audit.service';
 import { CorrelationModule } from '../common/correlation/correlation.module';
 
+
+
 @Module({
   imports: [TypeOrmModule.forFeature([AuditLog]), CorrelationModule],
   providers: [AuditService],
