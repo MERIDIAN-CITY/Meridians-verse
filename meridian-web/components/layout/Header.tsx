@@ -45,7 +45,7 @@ export function Header() {
             <Dialog.Trigger asChild>
               <button
                 aria-label="Toggle navigation menu"
-                className="md:hidden p-2 text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="md:hidden min-h-[44px] min-w-[44px] p-2.5 inline-flex items-center justify-center rounded-lg text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 {isOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
               </button>
@@ -55,22 +55,24 @@ export function Header() {
               {/* Overlay background for modern backdrop blur consistency */}
               <Dialog.Overlay className="fixed inset-0 z-40 bg-background/40 backdrop-blur-sm md:hidden" />
               
-              <Dialog.Content className="fixed top-16 left-0 right-0 z-40 bg-background border-b border-border px-4 pb-6 pt-2 space-y-2 md:hidden shadow-lg focus:outline-none">
+              <Dialog.Content className="fixed top-16 left-0 right-0 z-40 bg-background border-b border-border px-4 pb-6 pt-2 space-y-2 md:hidden shadow-lg focus:outline-none max-h-[calc(100vh-4rem)] overflow-y-auto">
                 <Dialog.Title className="sr-only">Mobile Navigation Menu</Dialog.Title>
                 <Dialog.Description className="sr-only">Access site sections and system configuration links.</Dialog.Description>
                 
-                <nav className="space-y-2">
-                  <Link href="#focus" className="block px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setIsOpen(false)}>Focus</Link>
-                  <Link href="#stream" className="block px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setIsOpen(false)}>Stream</Link>
-                  <Link href="#pool" className="block px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setIsOpen(false)}>Pool</Link>
-                  <Link href="#features" className="block px-4 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setIsOpen(false)}>Features</Link>
+                <nav className="space-y-1">
+                  <Link href="#focus" className="flex items-center min-h-[44px] px-4 py-3 text-base font-medium text-foreground hover:text-primary hover:bg-muted/50 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setIsOpen(false)}>Focus</Link>
+                  <Link href="#stream" className="flex items-center min-h-[44px] px-4 py-3 text-base font-medium text-foreground hover:text-primary hover:bg-muted/50 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setIsOpen(false)}>Stream</Link>
+                  <Link href="#pool" className="flex items-center min-h-[44px] px-4 py-3 text-base font-medium text-foreground hover:text-primary hover:bg-muted/50 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setIsOpen(false)}>Pool</Link>
+                  <Link href="#features" className="flex items-center min-h-[44px] px-4 py-3 text-base font-medium text-foreground hover:text-primary hover:bg-muted/50 transition-colors rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => setIsOpen(false)}>Features</Link>
                   
-                  <div className="flex items-center justify-between gap-2 px-4 pt-2 border-t border-border/50">
-                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Theme</span>
-                    <ThemeToggle />
+                  <div className="flex items-center justify-between gap-2 px-4 py-2 border-t border-border/50">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Theme</span>
+                    <div className="min-h-[44px] min-w-[44px] flex items-center justify-center">
+                      <ThemeToggle />
+                    </div>
                   </div>
                   <div className="pt-2">
-                    <button className="w-full px-4 py-2 text-sm font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">Get Started</button>
+                    <button className="w-full min-h-[44px] px-6 py-3 text-base font-semibold rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 flex items-center justify-center">Get Started</button>
                   </div>
                 </nav>
               </Dialog.Content>

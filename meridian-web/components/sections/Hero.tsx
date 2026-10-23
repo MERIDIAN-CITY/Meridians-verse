@@ -26,7 +26,7 @@ export function Hero() {
 
         {/* Main heading — LCP target */}
         <h1
-          className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight text-balance
+          className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-4 sm:mb-6 leading-tight text-balance break-words
                      hero-fade-up [animation-delay:100ms]"
         >
           Where Real-World Effort Meets{' '}
@@ -35,7 +35,7 @@ export function Hero() {
 
         {/* Subheading */}
         <p
-          className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto
+          className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto px-2
                      hero-fade-up [animation-delay:200ms]"
         >
           Earn by staying focused, stream payments in real-time, and participate in yield pools
@@ -44,13 +44,13 @@ export function Hero() {
 
         {/* CTA Buttons */}
         <div
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center
+          className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full max-w-sm sm:max-w-none mx-auto
                      hero-fade-up [animation-delay:300ms]"
         >
           <a
             href="#focus"
-            className="px-8 py-3 rounded-full bg-primary text-primary-foreground font-semibold
-                       hover:bg-primary/90 transition-all duration-200 flex items-center gap-2 group"
+            className="w-full sm:w-auto min-h-[44px] px-8 py-3.5 rounded-full bg-primary text-primary-foreground font-semibold
+                       hover:bg-primary/90 transition-all duration-200 flex items-center justify-center gap-2 group"
           >
             Start Focus Session
             <ArrowRight
@@ -60,8 +60,8 @@ export function Hero() {
           </a>
           <a
             href="#features"
-            className="px-8 py-3 rounded-full border border-primary text-primary font-semibold
-                       hover:bg-primary/5 transition-all duration-200"
+            className="w-full sm:w-auto min-h-[44px] px-8 py-3.5 rounded-full border border-primary text-primary font-semibold
+                       hover:bg-primary/5 transition-all duration-200 flex items-center justify-center"
           >
             Explore Features
           </a>
